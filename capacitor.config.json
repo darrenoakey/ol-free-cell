@@ -1,0 +1,16 @@
+{
+  "appId": "com.darrenoakey.olFreeCell",
+  "appName": "OL FreeCell",
+  "webDir": "web",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "path": "ios"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false
+    }
+  }
+}

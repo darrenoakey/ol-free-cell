@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+build/
+
+# macOS
+.DS_Store
+
+# Xcode
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+*.xcuserstate
+
+# Fastlane
+fastlane/report.xml
+fastlane/test_output/
+
+# Source SVGs / raster staging (kept out of the deployed web bundle)
+/assets/*.png

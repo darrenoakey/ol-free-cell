@@ -1,0 +1,48 @@
+#!/bin/bash
+# run - Project commands for ol-free-cell
+#
+# Usage:
+#   run deploy           # Deploy to Starbuck (default)
+#   run deploy Starbuck  # Deploy to specific device
+#   run build            # Build for App Store
+#   run status           # Show pipeline status
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_PUBLISH="$HOME/src/app-publish"
+
+cd "$SCRIPT_DIR"
+
+case "${1:-help}" in
+    deploy)
+        device="${2:-Starbuck}"
+        "$APP_PUBLISH/run" deploy "$device"
+        ;;
+    status)
+        "$APP_PUBLISH/run" status
+        ;;
+    build)
+        "$APP_PUBLISH/run" build
+        ;;
+    upload)
+        "$APP_PUBLISH/run" upload
+        ;;
+    screenshots)
+        "$APP_PUBLISH/run" screenshots
+        ;;
+    publish)
+        "$APP_PUBLISH/run" publish
+        ;;
+    help|*)
+        echo "Usage: run <command> [args]"
+        echo ""
+        echo "Commands:"
+        echo "  deploy [device]  - Deploy to iPhone (default: Starbuck)"
+        echo "  build            - Build IPA for App Store"
+        echo "  upload           - Upload to App Store Connect"
+        echo "  screenshots      - Capture screenshots"
+        echo "  status           - Show pipeline status"
+        echo "  publish          - Run full publish pipeline"
+        ;;
+esac

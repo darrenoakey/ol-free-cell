@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#1a7a52"/>
+      <stop offset="55%" stop-color="#0b3d2e"/>
+      <stop offset="100%" stop-color="#061a14"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4e4a6"/>
+      <stop offset="100%" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#g)"/>
+  <!-- four freecell slots -->
+  <g fill="none" stroke="url(#gold)" stroke-width="18">
+    <rect x="170" y="210" width="140" height="200" rx="24"/>
+    <rect x="351" y="210" width="140" height="200" rx="24"/>
+    <rect x="533" y="210" width="140" height="200" rx="24"/>
+    <rect x="714" y="210" width="140" height="200" rx="24"/>
+  </g>
+  <!-- cascade suggestion -->
+  <g>
+    <rect x="250" y="480" width="150" height="220" rx="22" fill="#fff" opacity="0.95"/>
+    <rect x="280" y="530" width="150" height="220" rx="22" fill="#f5f5f5" opacity="0.95"/>
+    <rect x="310" y="580" width="150" height="220" rx="22" fill="#fff" opacity="0.95"/>
+    <text x="385" y="700" text-anchor="middle" font-size="92" font-family="Georgia, serif" fill="#c0392b">A</text>
+    <text x="435" y="640" text-anchor="middle" font-size="48" font-family="Georgia, serif" fill="#1a1a1a">♠</text>
+  </g>
+  <g>
+    <rect x="560" y="500" width="150" height="220" rx="22" fill="#fff" opacity="0.95"/>
+    <rect x="590" y="560" width="150" height="220" rx="22" fill="#fff" opacity="0.95"/>
+    <text x="665" y="680" text-anchor="middle" font-size="92" font-family="Georgia, serif" fill="#1a1a1a">K</text>
+    <text x="715" y="620" text-anchor="middle" font-size="48" font-family="Georgia, serif" fill="#c0392b">♥</text>
+  </g>
+</svg>

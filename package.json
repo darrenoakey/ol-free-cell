@@ -1,0 +1,16 @@
+{
+  "name": "ol-free-cell",
+  "version": "1.0.0",
+  "description": "FreeCell with a daily, guaranteed-solvable deal",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0"
+  }
+}
