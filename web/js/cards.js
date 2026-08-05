@@ -54,6 +54,7 @@ function suitIndex(suit) {
 const Cards = {
   SUITS,
   SUIT_SYMBOL,
+  SUIT_RED,
   RANK_LABEL,
   freshDeck,
   cardLabel,
