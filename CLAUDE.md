@@ -61,3 +61,8 @@ Classic FreeCell (Microsoft rules):
 - Sequences may move as a unit when freecell+empty-cascade capacity allows
   (`(emptyFC+1) × 2^emptyCascades`, destination empty not counted)
 - Safe foundation autoplay runs after every player move
+
+## Interaction model
+
+- **Drag-and-drop only.** Pointer events on `#board` move cards/stacks; there is no click-to-select/tap-destination path and no sound. `UI._drag` must be cleared *before* `dropOn*` so `render()` is not suppressed by the mid-drag guard.
+- Multi-card runs: pointerdown on the deepest playable card of the sequence (`dataset.seqFromTop`); ghost clones the fan.
