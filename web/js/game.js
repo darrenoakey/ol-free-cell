@@ -25,11 +25,10 @@ class FreeCellGame {
     this.finishedAt = null;
     this.status = 'playing'; // playing | won | stuck
 
-    // Selection for two-tap / drag-style play: { type:'col'|'fc', index, count }
+    // Selection for drag play: { type:'col'|'fc', index, count }
     this.selection = null;
 
-    DealGen.autoplaySafe(this._stateView());
-    this._syncFoundationTopsFromRanks();
+    // No foundation auto-eat — player moves every card home.
     this._checkEnd();
   }
 
@@ -205,9 +204,9 @@ class FreeCellGame {
       this.freecells[sel.index] = null;
       this.moves++;
       this.selection = null;
-      const auto = this._runAutoplay();
+      this._packFreecells();
       this._checkEnd();
-      return { type: 'fc-to-fc', from: sel.index, fc, card, autoplay: auto };
+      return { type: 'fc-to-fc', from: sel.index, fc, card };
     }
     this.selection = null;
     return null;
@@ -334,43 +333,8 @@ class FreeCellGame {
     if (move.type === 'col-to-fc' || move.type === 'fc-to-col' || move.type === 'fc-to-found') {
       this._packFreecells();
     }
-    const autoplay = this._runAutoplay();
     this._checkEnd();
-    return { ...move, autoplay };
-  }
-
-  _runAutoplay() {
-    const moved = [];
-    let progress = true;
-    while (progress) {
-      progress = false;
-      for (let i = 0; i < 4; i++) {
-        const card = this.freecells[i];
-        if (card && DealGen.isSafeFoundationMove(card, this.foundations)) {
-          this.freecells[i] = null;
-          const si = Cards.suitIndex(card.suit);
-          this.foundations[si] = card.rank;
-          this.foundationTops[si] = card;
-          moved.push({ from: 'fc', index: i, card });
-          progress = true;
-        }
-      }
-      for (let c = 0; c < 8; c++) {
-        const col = this.cascades[c];
-        if (!col.length) continue;
-        const card = col[col.length - 1];
-        if (DealGen.isSafeFoundationMove(card, this.foundations)) {
-          col.pop();
-          const si = Cards.suitIndex(card.suit);
-          this.foundations[si] = card.rank;
-          this.foundationTops[si] = card;
-          moved.push({ from: 'col', index: c, card });
-          progress = true;
-        }
-      }
-    }
-    this._packFreecells();
-    return moved;
+    return { ...move };
   }
 
   _packFreecells() {

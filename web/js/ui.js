@@ -394,13 +394,16 @@ const UI = {
   },
 
   cardFrontEl(card) {
+    const wrap = document.createElement('div');
+    wrap.className = 'card face-up';
+    wrap.dataset.cardId = card.id;
     const img = document.createElement('img');
-    img.className = 'card face-up';
     img.src = `assets/cards/${Cards.cardImageFile(card)}`;
     img.alt = `${Cards.cardLabel(card)} of ${card.suit}`;
     img.draggable = false;
-    img.dataset.cardId = card.id;
-    return img;
+    img.className = 'card-face';
+    wrap.appendChild(img);
+    return wrap;
   },
 
   // ---- full board render -------------------------------------------------

@@ -12,7 +12,7 @@ Capacitor-based FreeCell iOS game with a date-seeded daily challenge that is
     `FreeCellSolver`: iterative DFS with transposition table + Baker-style safe
     autoplay that proves a deal is winnable
   - `web/js/game.js` — `FreeCellGame`: live rules (select/drop, supermove capacity,
-    undo, hint, win/stuck, safe autoplay)
+    undo, hint, win/stuck). No foundation autoplay during play.
   - `web/js/storage.js` — Capacitor Preferences (iCloud-synced) with localStorage fallback;
     per-date completion records, in-progress autosave, streak/stats
   - `web/js/confetti.js` — canvas confetti burst for the win screen
@@ -60,7 +60,7 @@ Classic FreeCell (Microsoft rules):
 - Cascades build down by alternating colour
 - Sequences may move as a unit when freecell+empty-cascade capacity allows
   (`(emptyFC+1) × 2^emptyCascades`, destination empty not counted)
-- Safe foundation autoplay runs after every player move
+- Player places every foundation card; solver-only autoplay stays inside DealGen
 
 ## Interaction model
 
