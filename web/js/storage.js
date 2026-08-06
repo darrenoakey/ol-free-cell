@@ -135,7 +135,7 @@ const GameStats = {
   },
 
   async getSettings() {
-    return Storage.getJSON(SETTINGS_KEY, { theme: 'emerald', sound: true });
+    return Storage.getJSON(SETTINGS_KEY, { theme: 'emerald' });
   },
 
   async setSettings(settings) {

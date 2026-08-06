@@ -1,5 +1,6 @@
 // app.js — bootstraps the app and is the UI's controller: owns the live
 // FreeCellGame, wires player actions to game rules + storage, no rendering.
+// Moves are drag-and-drop only (see ui.js pointer handlers).
 'use strict';
 
 function nextFrame() {
@@ -30,7 +31,7 @@ const App = {
   game: null,
   context: { mode: 'daily', date: null, isToday: true },
   stats: null,
-  settings: { theme: 'emerald', sound: true },
+  settings: { theme: 'emerald' },
   _recordableOnFinish: true,
   calYear: 0,
   calMonth: 0,
@@ -41,6 +42,7 @@ const App = {
     await Storage.init();
     this.settings = await GameStats.getSettings();
     const theme = this.settings.theme === 'midnight' ? 'midnight' : 'emerald';
+    this.settings = { theme };
     document.body.className = `theme-${theme}`;
     if (
       window.Capacitor ||
@@ -49,9 +51,7 @@ const App = {
     ) {
       document.body.classList.add('native-ios');
     }
-    Sound.enabled = this.settings.sound !== false;
     UI.setThemeLabel(theme);
-    UI.setSoundLabel(Sound.enabled);
     this.stats = await GameStats.getStats();
     await this.enterDaily(Prng.todayDateString());
   },
@@ -113,131 +113,69 @@ const App = {
     UI.animateDealIn(this.game);
   },
 
-  // ---- player actions ----
+  // ---- drag API (called by ui.js) ----------------------------------------
 
-  onCascadeClick(col, count) {
-    if (!this.game || this.game.status !== 'playing') return;
-    const g = this.game;
-    const sel = g.selection;
-
-    // Empty cascade as destination
-    if (g.cascades[col].length === 0) {
-      if (sel) {
-        const move = g.dropOnCascade(col);
-        if (move) {
-          Sound.play();
-          this._afterGameMove();
-        } else {
-          Sound.reject();
-          UI.shakeCascade(col);
-        }
-      }
-      return;
-    }
-
-    // Already selected this cascade → try quick-play (auto destination)
-    if (sel && sel.type === 'col' && sel.index === col) {
-      const move = g.quickPlayCascade(col);
-      if (move) {
-        Sound.play();
-        this._afterGameMove();
-      } else {
-        g.clearSelection();
-        UI.render(g, this.stats, this.context);
-      }
-      return;
-    }
-
-    // Selection exists on another source → try drop here
-    if (sel) {
-      const move = g.dropOnCascade(col);
-      if (move) {
-        Sound.play();
-        this._afterGameMove();
-        return;
-      }
-      // Illegal drop — reselect this cascade instead
-    }
-
-    // Select this cascade's sequence (from tapped card)
-    if (g.selectCascade(col, count || 1)) {
-      Sound.draw();
-      UI.render(g, this.stats, this.context);
-    }
+  canInteract() {
+    return !!(this.game && this.game.status === 'playing');
   },
 
-  onFreecellClick(fc) {
-    if (!this.game || this.game.status !== 'playing') return;
-    const g = this.game;
-    const sel = g.selection;
-
-    if (sel) {
-      // Try drop onto this freecell
-      if (!g.freecells[fc]) {
-        const move = g.dropOnFreecell(fc);
-        if (move) {
-          Sound.play();
-          this._afterGameMove();
-          return;
-        }
-      }
-      // Clicking occupied freecell while selected elsewhere → quick or reselect
-      if (g.freecells[fc] && sel.type === 'fc' && sel.index === fc) {
-        const move = g.quickPlayFreecell(fc);
-        if (move) {
-          Sound.play();
-          this._afterGameMove();
-        } else {
-          g.clearSelection();
-          UI.render(g, this.stats, this.context);
-        }
-        return;
-      }
-    }
-
-    if (g.freecells[fc]) {
-      if (sel && sel.type === 'fc' && sel.index === fc) {
-        const move = g.quickPlayFreecell(fc);
-        if (move) {
-          Sound.play();
-          this._afterGameMove();
-        } else {
-          g.clearSelection();
-          UI.render(g, this.stats, this.context);
-        }
-      } else {
-        g.selectFreecell(fc);
-        Sound.draw();
-        UI.render(g, this.stats, this.context);
-      }
-    } else if (sel) {
-      const move = g.dropOnFreecell(fc);
-      if (move) {
-        Sound.play();
-        this._afterGameMove();
-      } else {
-        Sound.reject();
-        UI.shakeFreecell(fc);
-      }
-    }
+  beginDragCascade(col, count) {
+    if (!this.canInteract()) return false;
+    return this.game.selectCascade(col, count || 1);
   },
 
-  onFoundationClick(suitIndex) {
-    if (!this.game || this.game.status !== 'playing') return;
-    const g = this.game;
-    if (!g.selection) return;
-    const move = g.dropOnFoundation(suitIndex);
+  beginDragFreecell(fc) {
+    if (!this.canInteract()) return false;
+    return this.game.selectFreecell(fc);
+  },
+
+  cancelDrag() {
+    if (!this.game) return;
+    this.game.clearSelection();
+    UI.render(this.game, this.stats, this.context);
+  },
+
+  refreshAfterSelect() {
+    if (!this.game) return;
+    UI.render(this.game, this.stats, this.context);
+  },
+
+  dropOnCascade(dest) {
+    if (!this.canInteract()) return false;
+    const move = this.game.dropOnCascade(dest);
     if (move) {
-      Sound.play();
       this._afterGameMove();
-    } else {
-      Sound.reject();
+      return true;
     }
+    UI.shakeCascade(dest);
+    return false;
   },
+
+  dropOnFreecell(fc) {
+    if (!this.canInteract()) return false;
+    const move = this.game.dropOnFreecell(fc);
+    if (move) {
+      this._afterGameMove();
+      return true;
+    }
+    UI.shakeFreecell(fc);
+    return false;
+  },
+
+  dropOnFoundation(suitIndex) {
+    if (!this.canInteract()) return false;
+    const move = this.game.dropOnFoundation(suitIndex);
+    if (move) {
+      this._afterGameMove();
+      return true;
+    }
+    return false;
+  },
+
+  // ---- chrome actions ----------------------------------------------------
 
   async onUndo() {
     if (!this.game || !this.game.undo()) return;
-    Sound.undo();
     UI.render(this.game, this.stats, this.context);
     if (this.context.mode === 'daily') await GameStats.saveProgress(this.context.date, this.game);
   },
@@ -250,11 +188,9 @@ const App = {
       const move = this.game.hint();
       UI.setLoading(false);
       if (!move) {
-        Sound.reject();
         UI.toast('No forced win from here \u2014 try Undo');
         return;
       }
-      Sound.hint();
       UI.highlightHint(move);
     }, 30);
   },
@@ -327,14 +263,7 @@ const App = {
     document.body.classList.remove('theme-emerald', 'theme-midnight');
     document.body.classList.add(`theme-${this.settings.theme}`);
     UI.setThemeLabel(this.settings.theme);
-    await GameStats.setSettings(this.settings);
-  },
-
-  async onSoundToggle() {
-    Sound.enabled = !Sound.enabled;
-    this.settings.sound = Sound.enabled;
-    UI.setSoundLabel(Sound.enabled);
-    await GameStats.setSettings(this.settings);
+    await GameStats.setSettings({ theme: this.settings.theme });
   },
 
   onWinClosed() {
@@ -374,10 +303,8 @@ const App = {
       this.stats = stats;
       UI.renderTopStrip(this.game, this.stats, this.context);
       if (this.game.status === 'won') {
-        Sound.win();
         UI.showWin(record, stats.currentStreak, this.context.isToday);
       } else {
-        Sound.stuck();
         UI.showStuck({ ...record, cardsRemaining: this.game.cardsRemaining() });
       }
     } else {
@@ -387,15 +314,15 @@ const App = {
         elapsedMs: this.game.elapsedMs(),
       };
       if (this.game.status === 'won') {
-        Sound.win();
         UI.showWin(record, this.stats.currentStreak, false);
       } else {
-        Sound.stuck();
         UI.showStuck({ ...record, cardsRemaining: this.game.cardsRemaining() });
       }
     }
   },
 };
+window.App = App;
+
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();

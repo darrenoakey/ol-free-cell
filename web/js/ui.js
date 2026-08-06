@@ -1,10 +1,14 @@
 // ui.js — DOM rendering + animation. Owns no game rules; calls back into app.js.
+// Card moves are drag-and-drop (pointer events). No click-to-play.
 'use strict';
 
 const UI = {
   els: {},
   controller: null,
-  _lastTap: null,
+
+  // Active pointer drag state (null when idle).
+  _drag: null,
+  _suppressClickUntil: 0,
 
   init(controller) {
     this.controller = controller;
@@ -14,6 +18,7 @@ const UI = {
       streakValue: $('streak-value'),
       homeValue: $('home-value'),
       movesValue: $('moves-value'),
+      board: $('board'),
       columns: Array.from(document.querySelectorAll('.column')),
       freecells: Array.from(document.querySelectorAll('.freecell')),
       foundations: Array.from(document.querySelectorAll('.foundation')),
@@ -32,22 +37,29 @@ const UI = {
 
   _wireStatic() {
     const c = this.controller;
-    this.els.columns.forEach((col) => {
-      col.addEventListener('click', (e) => {
-        const cardEl = e.target.closest('.card');
-        let count = 1;
-        if (cardEl && cardEl.dataset.seqFromTop) {
-          count = Number(cardEl.dataset.seqFromTop) || 1;
+    const board = this.els.board;
+
+    // Drag / drop is the only way to move cards.
+    board.addEventListener('pointerdown', (e) => this._onPointerDown(e));
+    board.addEventListener('pointermove', (e) => this._onPointerMove(e));
+    board.addEventListener('pointerup', (e) => this._onPointerUp(e));
+    board.addEventListener('pointercancel', (e) => this._onPointerCancel(e));
+    board.addEventListener('lostpointercapture', () => {
+      if (this._drag) this._endDrag(false);
+    });
+
+    // Block residual click synthesis after a drag on iOS/WebKit.
+    board.addEventListener(
+      'click',
+      (e) => {
+        if (Date.now() < this._suppressClickUntil) {
+          e.preventDefault();
+          e.stopPropagation();
         }
-        c.onCascadeClick(Number(col.dataset.col), count);
-      });
-    });
-    this.els.freecells.forEach((fc) => {
-      fc.addEventListener('click', () => c.onFreecellClick(Number(fc.dataset.fc)));
-    });
-    this.els.foundations.forEach((f) => {
-      f.addEventListener('click', () => c.onFoundationClick(Number(f.dataset.found)));
-    });
+      },
+      true,
+    );
+
     this.els.undoBtn.addEventListener('click', () => c.onUndo());
     this.els.hintBtn.addEventListener('click', () => c.onHint());
     this.els.newBtn.addEventListener('click', () => c.onNewGameRequested());
@@ -63,7 +75,6 @@ const UI = {
       c.onArchiveRequested();
     });
     document.getElementById('menu-theme').addEventListener('click', () => c.onThemeToggle());
-    document.getElementById('menu-sound').addEventListener('click', () => c.onSoundToggle());
     document.getElementById('menu-rules').addEventListener('click', () => {
       this.hideModal('overlay-menu');
       this.showModal('overlay-rules');
@@ -79,6 +90,280 @@ const UI = {
     document.getElementById('cal-next').addEventListener('click', () => c.onCalendarShift(1));
     document.getElementById('cal-close').addEventListener('click', () => this.hideModal('overlay-calendar'));
   },
+
+  // ---- drag / drop -------------------------------------------------------
+
+  _onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (this._drag) return;
+    if (!this.controller || !this.controller.canInteract || !this.controller.canInteract()) return;
+
+    const cardEl = e.target.closest('.card.playable');
+    if (!cardEl || !this.els.board.contains(cardEl)) return;
+
+    const colEl = cardEl.closest('.column');
+    const fcEl = cardEl.closest('.freecell');
+    let source = null;
+
+    if (colEl) {
+      const col = Number(colEl.dataset.col);
+      const count = Number(cardEl.dataset.seqFromTop) || 1;
+      if (!this.controller.beginDragCascade(col, count)) return;
+      source = { kind: 'col', index: col, count };
+    } else if (fcEl) {
+      const fc = Number(fcEl.dataset.fc);
+      if (!this.controller.beginDragFreecell(fc)) return;
+      source = { kind: 'fc', index: fc, count: 1 };
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    const grabCards = this._collectDragCardEls(source);
+    if (!grabCards.length) {
+      this.controller.cancelDrag();
+      return;
+    }
+
+    const firstRect = grabCards[0].getBoundingClientRect();
+    const ghost = this._buildDragGhost(grabCards, firstRect);
+    document.body.appendChild(ghost);
+
+    // Hide source cards while the ghost rides the pointer.
+    grabCards.forEach((el) => el.classList.add('drag-source-hidden'));
+
+    this._drag = {
+      pointerId: e.pointerId,
+      source,
+      grabCards,
+      ghost,
+      startX: e.clientX,
+      startY: e.clientY,
+      originLeft: firstRect.left,
+      originTop: firstRect.top,
+      offsetX: e.clientX - firstRect.left,
+      offsetY: e.clientY - firstRect.top,
+      moved: false,
+      hoverEl: null,
+    };
+
+    try {
+      this.els.board.setPointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+    document.body.classList.add('is-dragging');
+    this._markDropTargets(true);
+    this._positionGhost(e.clientX, e.clientY);
+  },
+
+  _onPointerMove(e) {
+    const d = this._drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    e.preventDefault();
+
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved && dx * dx + dy * dy > 36) {
+      d.moved = true;
+      d.ghost.classList.add('active');
+    }
+    if (d.moved) {
+      this._positionGhost(e.clientX, e.clientY);
+      this._updateHoverTarget(e.clientX, e.clientY);
+    }
+  },
+
+  _onPointerUp(e) {
+    const d = this._drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    e.preventDefault();
+
+    if (d.moved) {
+      this._suppressClickUntil = Date.now() + 400;
+      const target = this._hitTestDrop(e.clientX, e.clientY);
+      // Tear down the ghost/drag lock BEFORE committing the move so render()
+      // is not suppressed by the mid-drag guard.
+      this._teardownDragVisuals(d);
+      this._drag = null;
+      const ok = target ? this._applyDrop(target) : false;
+      if (!ok) {
+        this._shakeDrop(target);
+        this.controller.cancelDrag();
+      }
+    } else {
+      // Tap without drag — keep selection highlighted, no move.
+      this._teardownDragVisuals(d);
+      this._drag = null;
+      this.controller.refreshAfterSelect();
+    }
+  },
+
+  _onPointerCancel(e) {
+    const d = this._drag;
+    if (!d || (e && e.pointerId !== d.pointerId)) return;
+    this._teardownDragVisuals(d);
+    this._drag = null;
+    this.controller.cancelDrag();
+  },
+
+  _teardownDragVisuals(d) {
+    if (!d) return;
+    if (d.ghost && d.ghost.parentNode) d.ghost.remove();
+    d.grabCards.forEach((el) => el.classList.remove('drag-source-hidden'));
+    if (d.hoverEl) d.hoverEl.classList.remove('drop-hover');
+    d.hoverEl = null;
+    document.querySelectorAll('.drop-hover').forEach((el) => el.classList.remove('drop-hover'));
+    this._markDropTargets(false);
+    document.body.classList.remove('is-dragging');
+    try {
+      if (d.pointerId != null) this.els.board.releasePointerCapture(d.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  },
+
+  _endDrag(success, opts) {
+    const d = this._drag;
+    if (!d) return;
+    this._teardownDragVisuals(d);
+    this._drag = null;
+    if (!success) {
+      if (opts && opts.keepSelection) {
+        this.controller.refreshAfterSelect();
+      } else {
+        this.controller.cancelDrag();
+      }
+    }
+  },
+
+  _collectDragCardEls(source) {
+    if (source.kind === 'col') {
+      const colEl = this.els.columns[source.index];
+      const cards = Array.from(colEl.querySelectorAll('.card'));
+      return cards.slice(Math.max(0, cards.length - source.count));
+    }
+    const fcEl = this.els.freecells[source.index];
+    const card = fcEl.querySelector('.card');
+    return card ? [card] : [];
+  },
+
+  _buildDragGhost(cardEls, firstRect) {
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.style.width = `${firstRect.width}px`;
+
+    const sampleWidth = firstRect.width || 42;
+    const cardHeight = sampleWidth * (768 / 512);
+    const fanGap = Math.max(14, cardHeight * 0.22);
+
+    cardEls.forEach((src, i) => {
+      const clone = src.cloneNode(true);
+      clone.classList.remove('selected', 'drag-source-hidden', 'hint-glow');
+      clone.style.position = 'absolute';
+      clone.style.left = '0';
+      clone.style.top = `${i * fanGap}px`;
+      clone.style.width = '100%';
+      clone.style.zIndex = String(i + 1);
+      clone.draggable = false;
+      ghost.appendChild(clone);
+    });
+
+    ghost.style.height = `${(cardEls.length - 1) * fanGap + cardHeight}px`;
+    return ghost;
+  },
+
+  _positionGhost(clientX, clientY) {
+    const d = this._drag;
+    if (!d || !d.ghost) return;
+    const x = clientX - d.offsetX;
+    const y = clientY - d.offsetY;
+    d.ghost.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  },
+
+  _markDropTargets(on) {
+    this.els.columns.forEach((el) => el.classList.toggle('drop-target', on));
+    this.els.freecells.forEach((el) => el.classList.toggle('drop-target', on));
+    this.els.foundations.forEach((el) => el.classList.toggle('drop-target', on));
+  },
+
+  _clearHover() {
+    if (this._drag && this._drag.hoverEl) {
+      this._drag.hoverEl.classList.remove('drop-hover');
+      this._drag.hoverEl = null;
+    }
+    document.querySelectorAll('.drop-hover').forEach((el) => el.classList.remove('drop-hover'));
+  },
+
+  _resolveTargetFromEl(el) {
+    if (!el) return null;
+    const col = el.closest && el.closest('.column');
+    if (col && this.els.board.contains(col)) {
+      return { kind: 'col', index: Number(col.dataset.col), el: col };
+    }
+    const fc = el.closest && el.closest('.freecell');
+    if (fc && this.els.board.contains(fc)) {
+      return { kind: 'fc', index: Number(fc.dataset.fc), el: fc };
+    }
+    const found = el.closest && el.closest('.foundation');
+    if (found && this.els.board.contains(found)) {
+      return { kind: 'found', index: Number(found.dataset.found), el: found };
+    }
+    return null;
+  },
+
+  _hitTestDrop(clientX, clientY) {
+    const d = this._drag;
+    // Hide ghost so elementsFromPoint sees the board underneath.
+    if (d && d.ghost) d.ghost.style.visibility = 'hidden';
+    const stack = document.elementsFromPoint(clientX, clientY);
+    if (d && d.ghost) d.ghost.style.visibility = '';
+
+    for (const el of stack) {
+      if (d && (el === d.ghost || d.ghost.contains(el))) continue;
+      // Don't treat the cards we're dragging (still in DOM, hidden) as a target
+      // of their own source column unless the pointer is over that column area —
+      // dropping on source column is a no-op cancel.
+      const target = this._resolveTargetFromEl(el);
+      if (target) return target;
+    }
+    return null;
+  },
+
+  _updateHoverTarget(clientX, clientY) {
+    const target = this._hitTestDrop(clientX, clientY);
+    const nextEl = target ? target.el : null;
+    const d = this._drag;
+    if (!d) return;
+    if (d.hoverEl === nextEl) return;
+    if (d.hoverEl) d.hoverEl.classList.remove('drop-hover');
+    d.hoverEl = nextEl;
+    if (nextEl) nextEl.classList.add('drop-hover');
+  },
+
+  _applyDrop(target) {
+    if (!target || !this.controller) return false;
+    if (target.kind === 'col') return this.controller.dropOnCascade(target.index);
+    if (target.kind === 'fc') return this.controller.dropOnFreecell(target.index);
+    if (target.kind === 'found') return this.controller.dropOnFoundation(target.index);
+    return false;
+  },
+
+  _shakeDrop(target) {
+    if (!target) return;
+    if (target.kind === 'col') this.shakeCascade(target.index);
+    else if (target.kind === 'fc') this.shakeFreecell(target.index);
+    else if (target.kind === 'found') {
+      const el = this.els.foundations[target.index];
+      if (!el) return;
+      el.classList.remove('shake');
+      // eslint-disable-next-line no-unused-expressions
+      void el.offsetWidth;
+      el.classList.add('shake');
+    }
+  },
+
+  // ---- modals / chrome ---------------------------------------------------
 
   showModal(id) {
     document.getElementById(id).classList.remove('hidden');
@@ -118,7 +403,7 @@ const UI = {
     return img;
   },
 
-  // ---- full board render ----
+  // ---- full board render -------------------------------------------------
 
   renderTopStrip(game, stats, context) {
     const label = context.isToday
@@ -164,7 +449,6 @@ const UI = {
         colEl.appendChild(el);
       }
       colEl.classList.toggle('empty', cards.length === 0);
-      colEl.classList.toggle('drop-target', !!(sel && cards.length === 0));
     });
   },
 
@@ -173,7 +457,10 @@ const UI = {
       el.innerHTML = '';
       const card = game.freecells[i];
       el.classList.toggle('empty', !card);
-      el.classList.toggle('selected', !!(game.selection && game.selection.type === 'fc' && game.selection.index === i));
+      el.classList.toggle(
+        'selected',
+        !!(game.selection && game.selection.type === 'fc' && game.selection.index === i),
+      );
       if (card) {
         const img = this.cardFrontEl(card);
         img.classList.add('playable', 'slot-card');
@@ -200,6 +487,8 @@ const UI = {
   },
 
   render(game, stats, context) {
+    // Never stomp the board mid-drag — the ghost owns the visual.
+    if (this._drag) return;
     this.renderTopStrip(game, stats, context);
     this.renderCascades(game);
     this.renderSlots(game);
@@ -213,6 +502,7 @@ const UI = {
 
   shakeCascade(col) {
     const colEl = this.els.columns[col];
+    if (!colEl) return;
     colEl.classList.remove('shake');
     // eslint-disable-next-line no-unused-expressions
     void colEl.offsetWidth;
@@ -221,6 +511,7 @@ const UI = {
 
   shakeFreecell(fc) {
     const el = this.els.freecells[fc];
+    if (!el) return;
     el.classList.remove('shake');
     // eslint-disable-next-line no-unused-expressions
     void el.offsetWidth;
@@ -368,9 +659,6 @@ const UI = {
   setThemeLabel(theme) {
     document.getElementById('theme-label').textContent = theme === 'emerald' ? 'Emerald' : 'Midnight';
   },
-  setSoundLabel(on) {
-    document.getElementById('sound-label').textContent = on ? 'On' : 'Off';
-  },
 
   renderCalendar(year, month, completions, todayStr) {
     document.getElementById('cal-title').textContent = new Date(year, month, 1).toLocaleString(undefined, {
@@ -413,3 +701,5 @@ const UI = {
     }
   },
 };
+
+window.UI = UI;

@@ -15,10 +15,9 @@ Capacitor-based FreeCell iOS game with a date-seeded daily challenge that is
     undo, hint, win/stuck, safe autoplay)
   - `web/js/storage.js` — Capacitor Preferences (iCloud-synced) with localStorage fallback;
     per-date completion records, in-progress autosave, streak/stats
-  - `web/js/sound.js` — tiny WebAudio-synthesized SFX, no audio assets
   - `web/js/confetti.js` — canvas confetti burst for the win screen
-  - `web/js/ui.js` — all DOM rendering + deal-in / hint glow animations
-  - `web/js/app.js` — bootstrap + controller: owns the live `FreeCellGame`
+  - `web/js/ui.js` — DOM rendering + pointer drag-and-drop (cards/stacks) + deal-in / hint glow
+  - `web/js/app.js` — bootstrap + controller: owns the live `FreeCellGame`; no sound
   - `web/assets/cards/*.png` — 52-card deck art (shared with ol-golf / ol-bridge cardmaker)
   - `web/assets/card-back.svg` — ornate card back
 - `ios/` — Capacitor iOS shell (Xcode project at `ios/App/App.xcodeproj`)
