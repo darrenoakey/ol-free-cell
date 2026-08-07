@@ -44,13 +44,7 @@ const App = {
     const theme = this.settings.theme === 'midnight' ? 'midnight' : 'emerald';
     this.settings = { theme };
     document.body.className = `theme-${theme}`;
-    if (
-      window.Capacitor ||
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    ) {
-      document.body.classList.add('native-ios');
-    }
+    // setupOrientationLock() already stamps native-ios on real iOS/Capacitor.
     UI.setThemeLabel(theme);
     this.stats = await GameStats.getStats();
     await this.enterDaily(Prng.todayDateString());
@@ -322,7 +316,6 @@ const App = {
   },
 };
 window.App = App;
-
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();

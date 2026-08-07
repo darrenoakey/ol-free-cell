@@ -1,0 +1,136 @@
+name: App Store Release
+
+# Build App Store binaries on a clean GA macOS host so the archive cannot inherit
+# the developer laptop's pre-release BuildMachineOSBuild stamp.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "preflight checks the clean runner; full builds and uploads"
+        type: choice
+        options: [full, preflight]
+        default: full
+      submit:
+        description: "Submit for review after App Store Connect finishes processing"
+        type: boolean
+        default: true
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select GA Xcode and verify the host
+        run: |
+          set -euo pipefail
+          for candidate in /Applications/Xcode_26.6.0.app /Applications/Xcode_26.6.app /Applications/Xcode.app; do
+            if [ -d "$candidate" ]; then sudo xcode-select -s "$candidate"; break; fi
+          done
+          sw_vers
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos
+          host_build="$(sw_vers -buildVersion)"
+          case "$host_build" in
+            *[a-z])
+              echo "::error::Runner is on a pre-release macOS seed ($host_build)"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify release entrypoints
+        run: |
+          set -euo pipefail
+          lanes="$(fastlane lanes)"
+          for lane in build upload_binary wait_for_processing submit; do
+            grep -F -- "fastlane ios $lane" <<<"$lanes"
+          done
+
+      - name: Install project dependencies
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npx --no-install cap sync ios
+
+      - name: Install App Store Connect poller dependencies
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --break-system-packages --quiet pyjwt cryptography
+          python3 -c "import jwt, cryptography; print('pyjwt', jwt.__version__)"
+
+      - name: Restore App Store Connect API key
+        if: ${{ inputs.mode == 'full' }}
+        env:
+          ASC_API_KEY_JSON: ${{ secrets.ASC_API_KEY_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ASC_API_KEY_JSON:-}" ]; then
+            echo "::error::secret ASC_API_KEY_JSON is not set"
+            exit 1
+          fi
+          umask 077
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$ASC_API_KEY_JSON" > ~/.appstoreconnect/api_key.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path.home() / ".appstoreconnect"
+          config = json.loads((root / "api_key.json").read_text())
+          for field in ("key_id", "issuer_id", "key"):
+              if not config.get(field):
+                  raise SystemExit(f"ASC_API_KEY_JSON is missing {field}")
+          key_path = root / "private_keys" / f"AuthKey_{config['key_id']}.p8"
+          key_path.write_text(config["key"])
+          key_path.chmod(0o600)
+          print("installed", key_path)
+          PY
+
+      - name: Archive and export IPA
+        if: ${{ inputs.mode == 'full' }}
+        run: fastlane ios build
+
+      - name: Record binary provenance
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          app=build/ol-free-cell-refresh.xcarchive/Products/Applications/App.app
+          plutil -p "$app/Info.plist" | grep -E 'BuildMachineOSBuild|DTXcode|DTSDK|DTPlatform|CFBundleVersion|CFBundleShortVersionString'
+          machine="$(/usr/libexec/PlistBuddy -c 'Print :BuildMachineOSBuild' "$app/Info.plist")"
+          case "$machine" in
+            *[a-z])
+              echo "::error::archive was stamped by a pre-release macOS host ($machine)"
+              exit 1
+              ;;
+          esac
+
+      - name: Upload IPA to App Store Connect
+        if: ${{ inputs.mode == 'full' }}
+        run: fastlane ios upload_binary
+
+      - name: Wait for App Store Connect processing
+        if: ${{ inputs.mode == 'full' }}
+        run: fastlane ios wait_for_processing
+
+      - name: Submit for review
+        if: ${{ inputs.mode == 'full' && inputs.submit }}
+        run: fastlane ios submit
+
+      - name: Collect FreeCell IPA artifacts
+        if: ${{ always() && inputs.mode == 'full' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ol-free-cell-ipa
+          if-no-files-found: warn
+          path: |
+            build/export/*.ipa
+            build/export/DistributionSummary.plist
+            build/export/Packaging.log
+            build/build_number.txt

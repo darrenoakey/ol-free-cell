@@ -2,9 +2,11 @@
   "name": "ol-free-cell",
   "version": "1.0.0",
   "description": "FreeCell with a daily, guaranteed-solvable deal",
+  "type": "module",
   "main": "index.html",
   "scripts": {
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "test:bdd:web": "cucumber-js --import tests/bdd/support/world.js --import tests/bdd/steps/sunlit_felt.steps.js tests/bdd/features/sunlit_felt.feature --tags 'not @native'"
   },
   "dependencies": {
     "@capacitor/cli": "^8.0.0",
@@ -12,5 +14,17 @@
     "@capacitor/ios": "^8.0.0",
     "@capacitor/status-bar": "^8.0.0",
     "@capacitor/preferences": "^8.0.0"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "playwright": "^1.54.2"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
+  },
+  "allowScripts": {
+    "fsevents@2.3.2": true
   }
 }

@@ -1,0 +1,48 @@
+{
+  "project_path": "/Users/darrenoakey/src/.agentd3-worktrees/ol-free-cell-refresh",
+  "project_type": "web",
+  "project_name": "ol-free-cell-refresh",
+  "bundle_id": "com.darrenoakey.olFreeCell",
+  "app_name": "OL FreeCell",
+  "app_subtitle": "Daily Solvable FreeCell",
+  "app_description": "Unwind with OL FreeCell \u2014 classic FreeCell on a soft sunlit felt table, with a daily deal that is proven solvable before it reaches your screen.\n\nBuild foundations, use free cells wisely, and enjoy a lighter, happier table that stays rock-steady in portrait no matter how you hold the phone.\n\nFEATURES:\n\u2022 Daily guaranteed-solvable FreeCell deal\n\u2022 Practice mode for unlimited play\n\u2022 Soft sunlit green-felt table and clear card depth\n\u2022 Undo and hint helpers when you need them\n\u2022 Drag-only card moves that feel natural\n\u2022 Stats for your daily run\n\u2022 Portrait lock with zero rotation jiggle\n\u2022 Offline play \u2014 no account required\n\nClear every cascade, finish the day, and come back tomorrow for another proven winnable layout.",
+  "app_keywords": [
+    "freecell",
+    "free cell",
+    "solitaire",
+    "cards",
+    "daily",
+    "puzzle",
+    "felt",
+    "casual",
+    "offline",
+    "card game"
+  ],
+  "app_store_id": "6798870093",
+  "current_version": "1.0.3",
+  "current_build": 10,
+  "completed_steps": [
+    "detect",
+    "structure",
+    "git",
+    "identity",
+    "icon",
+    "signing",
+    "screenshots",
+    "metadata",
+    "support",
+    "appstore_create",
+    "build"
+  ],
+  "current_step": "upload",
+  "last_error": "Step returned failure",
+  "created_at": "2026-08-06T15:49:36.849622",
+  "last_run": "2026-08-07T13:28:25.521014",
+  "metadata": {
+    "app_store_version_id": "ef1b208d-b04d-4fe8-b472-c1ee19c8ce92",
+    "xcode_project": "/Users/darrenoakey/src/.agentd3-worktrees/ol-free-cell-refresh/ios/App/App.xcodeproj",
+    "archive_path": "/Users/darrenoakey/src/.agentd3-worktrees/ol-free-cell-refresh/build/ol-free-cell-refresh.xcarchive",
+    "ipa_path": "/Users/darrenoakey/src/.agentd3-worktrees/ol-free-cell-refresh/build/export/ol-free-cell-refresh.ipa",
+    "latest_build_id": "362a8110-7207-4eca-b178-1146988bcbe6"
+  }
+}

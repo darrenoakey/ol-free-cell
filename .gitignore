@@ -19,3 +19,48 @@ fastlane/test_output/
 
 # Source SVGs / raster staging (kept out of the deployed web bundle)
 /assets/*.png
+
+
+# app-publish managed
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+*.ipa
+*.app
+*.dSYM.zip
+*.dSYM
+
+# Local release artifacts and credentials
+/local/
+/private_keys/
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/
+fastlane/test_output/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm
+
+# Capacitor
+ios/App/Pods/
+ios/.build/

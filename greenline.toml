@@ -8,12 +8,12 @@ main_branch = "main"
 # Must be safe to run concurrently from multiple worktrees.
 check = "./run check"
 
-# Deploy command. cwd = the canonical checkout. Must rebuild/restart prod,
-# health-check, exit nonzero on unhealthy, and be idempotent (safe to re-run).
+# Deploy command. cwd = the canonical checkout. Proves this exact commit builds,
+# signs and packages an App Store archive on a clean GA macOS runner.
 deploy = "./run deploy"
 
-# Optional health-only probe. Empty = re-run `deploy` as the health probe.
-health = ""
+# Health verifies that deploy's exact-SHA App Store preflight succeeded.
+health = "./run health"
 
 # Informational: the auto/service name this repo deploys.
 service = "ol-free-cell"

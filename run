@@ -1,48 +1,280 @@
 #!/bin/bash
 # run - Project commands for ol-free-cell
-#
-# Usage:
-#   run deploy           # Deploy to Starbuck (default)
-#   run deploy Starbuck  # Deploy to specific device
-#   run build            # Build for App Store
-#   run status           # Show pipeline status
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_PUBLISH="$HOME/src/app-publish"
+CHECK_DERIVED_DATA="$SCRIPT_DIR/local/check-derived-data"
 
-cd "$SCRIPT_DIR"
+usage() {
+    cat <<'EOF'
+Usage: ./run <command> [args]
+
+Commands:
+  check          Run the complete greenline quality gate (340-second deadline)
+  deploy         Prove the current SHA with the App Store preflight workflow
+  health         Verify a successful App Store preflight for the current SHA
+  device [name]  Sync, build, install, and launch on a device (default: Starbuck)
+  status         Show the app-publish pipeline status
+  publish        Run the full local App Store publish pipeline
+  help           Show this help
+EOF
+}
+
+app_publish_run() {
+    local git_common_dir
+    local app_publish
+
+    git_common_dir="$(git -C "$SCRIPT_DIR" rev-parse --path-format=absolute --git-common-dir)"
+    app_publish="$(cd "$(dirname "$git_common_dir")/.." && pwd)/app-publish/run"
+    if [[ ! -x "$app_publish" ]]; then
+        echo "ERROR: app-publish executable not found at $app_publish" >&2
+        echo "Expected app-publish beside the canonical ol-free-cell checkout." >&2
+        return 1
+    fi
+    printf '%s\n' "$app_publish"
+}
+
+current_sha() {
+    git -C "$SCRIPT_DIR" rev-parse HEAD
+}
+
+matching_preflight_runs() {
+    local repository="$1"
+    local sha="$2"
+    local branch="${3:-}"
+    local args=(
+        run list
+        --repo "$repository"
+        --workflow appstore.yml
+        --event workflow_dispatch
+        --limit 100
+        --json databaseId,headSha,event,status,conclusion
+    )
+
+    if [[ -n "$branch" ]]; then
+        args+=(--branch "$branch")
+    fi
+    gh "${args[@]}" \
+        --jq ".[] | select(.headSha == \"$sha\" and .event == \"workflow_dispatch\") | [.databaseId, .status, .conclusion] | @tsv"
+}
+
+cleanup_preflight_branch() {
+    if [[ -n "${PREFLIGHT_REMOTE_REF:-}" && -n "${PREFLIGHT_SHA:-}" ]]; then
+        git -C "$SCRIPT_DIR" push \
+            --force-with-lease="$PREFLIGHT_REMOTE_REF:$PREFLIGHT_SHA" \
+            origin ":$PREFLIGHT_REMOTE_REF" >/dev/null 2>&1 ||
+            echo "WARNING: temporary branch was not removed because its remote value changed" >&2
+    fi
+}
+
+deploy_preflight() {
+    local sha branch repository remote_sha known_ids run_id run_state candidate_id
+    local discovery_deadline run_deadline
+    local -a new_run_ids
+
+    sha="$(current_sha)"
+    branch="greenline-preflight/$sha"
+    repository="$(cd "$SCRIPT_DIR" && gh repo view --json nameWithOwner --jq .nameWithOwner)"
+    remote_sha="$(git -C "$SCRIPT_DIR" ls-remote --heads origin "refs/heads/$branch" | awk '{print $1}')"
+
+    PREFLIGHT_SHA="$sha"
+    PREFLIGHT_REMOTE_REF="refs/heads/$branch"
+    trap cleanup_preflight_branch EXIT
+
+    git -C "$SCRIPT_DIR" push \
+        --force-with-lease="$PREFLIGHT_REMOTE_REF:${remote_sha:-}" \
+        origin "$sha:$PREFLIGHT_REMOTE_REF"
+
+    known_ids="$(
+        while IFS=$'\t' read -r candidate_id _; do
+            printf '%s\n' "$candidate_id"
+        done < <(matching_preflight_runs "$repository" "$sha" "$branch")
+    )"
+    known_ids=$'\n'"$known_ids"$'\n'
+
+    gh workflow run appstore.yml \
+        --repo "$repository" \
+        --ref "$branch" \
+        --field mode=preflight \
+        --field submit=false
+
+    run_id=""
+    discovery_deadline=$((SECONDS + 180))
+    while ((SECONDS < discovery_deadline)); do
+        new_run_ids=()
+        while IFS=$'\t' read -r candidate_id _; do
+            if [[ -n "$candidate_id" && "$known_ids" != *$'\n'"$candidate_id"$'\n'* ]]; then
+                new_run_ids+=("$candidate_id")
+            fi
+        done < <(matching_preflight_runs "$repository" "$sha" "$branch")
+        if ((${#new_run_ids[@]} > 1)); then
+            echo "ERROR: multiple new matching workflow_dispatch runs appeared for $sha" >&2
+            return 1
+        fi
+        if ((${#new_run_ids[@]} == 1)); then
+            run_id="${new_run_ids[0]}"
+            break
+        fi
+        sleep 5
+    done
+    if [[ -z "$run_id" ]]; then
+        echo "ERROR: no matching workflow_dispatch run appeared for $sha" >&2
+        return 1
+    fi
+
+    run_deadline=$((SECONDS + 1800))
+    while ((SECONDS < run_deadline)); do
+        run_state="$(
+            gh run view "$run_id" --repo "$repository" \
+                --json status,conclusion \
+                --jq '[.status, .conclusion] | @tsv'
+        )"
+        if [[ "$run_state" == completed$'\t'success ]]; then
+            printf 'App Store preflight succeeded for %s (run %s)\n' "$sha" "$run_id"
+            cleanup_preflight_branch
+            PREFLIGHT_REMOTE_REF=""
+            trap - EXIT
+            return 0
+        fi
+        if [[ "$run_state" == completed$'\t'* ]]; then
+            echo "ERROR: App Store preflight run $run_id finished with ${run_state#*$'\t'}" >&2
+            return 1
+        fi
+        sleep 10
+    done
+
+    echo "ERROR: App Store preflight run $run_id exceeded its 1800-second deadline" >&2
+    return 1
+}
+
+health_preflight() {
+    local sha repository run_id
+
+    sha="$(current_sha)"
+    repository="$(cd "$SCRIPT_DIR" && gh repo view --json nameWithOwner --jq .nameWithOwner)"
+    run_id=""
+    while IFS=$'\t' read -r candidate_id status conclusion; do
+        if [[ "$status" == "completed" && "$conclusion" == "success" ]]; then
+            run_id="$candidate_id"
+            break
+        fi
+    done < <(matching_preflight_runs "$repository" "$sha")
+    if [[ -z "$run_id" ]]; then
+        echo "ERROR: no successful appstore.yml workflow_dispatch run found for $sha" >&2
+        return 1
+    fi
+    printf 'App Store preflight is healthy for %s (run %s)\n' "$sha" "$run_id"
+}
+
+bootstrap_release_gate() {
+    bash -n "$SCRIPT_DIR/run"
+    ruby -ryaml -e '
+path = ARGV.fetch(0)
+YAML.respond_to?(:unsafe_load_file) ? YAML.unsafe_load_file(path) : YAML.load_file(path)
+' "$SCRIPT_DIR/.github/workflows/appstore.yml"
+    ruby -c "$SCRIPT_DIR/fastlane/Fastfile" >/dev/null
+    /usr/bin/python3 - "$SCRIPT_DIR/scripts/wait_for_build.py" <<'PY'
+import ast
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+PY
+    (cd "$SCRIPT_DIR" && gh repo view --json nameWithOwner --jq .nameWithOwner >/dev/null)
+    echo "Bootstrap release gate passed."
+}
+
+check_steps() {
+    cd "$SCRIPT_DIR"
+    npm ci
+    npm audit
+    npm run test:bdd:web
+    npx --no-install cap sync ios
+
+    # Pre-boot the gate simulator so XCTest AX comes up warm.
+    SIM_NAME="iPhone 17 Pro"
+    SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
+    if [[ -z "${SIM_UDID:-}" ]]; then
+        echo "ERROR: no available $SIM_NAME simulator is installed" >&2
+        exit 1
+    fi
+    xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
+    xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
+    xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
+
+    # Clear leftover UITest residue that can poison AX.
+    xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olGolf >/dev/null 2>&1 || true
+    xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olFreeCell >/dev/null 2>&1 || true
+    xcrun simctl terminate "$SIM_UDID" com.apple.springboard >/dev/null 2>&1 || true
+
+    xcodebuild \
+        -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
+        -scheme App \
+        -configuration Release \
+        -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+        -derivedDataPath "$CHECK_DERIVED_DATA" \
+        CODE_SIGNING_ALLOWED=NO \
+        EXCLUDED_ARCHS=x86_64 \
+        -only-testing:AppUITests \
+        test
+}
+
+check_with_deadline() {
+    /usr/bin/python3 - "$SCRIPT_DIR/run" <<'PY'
+import os
+import signal
+import subprocess
+import sys
+
+process = subprocess.Popen([sys.argv[1], "__check_steps"], start_new_session=True)
+try:
+    result = process.wait(timeout=340)
+except subprocess.TimeoutExpired:
+    print("ERROR: check exceeded its 340-second deadline", file=sys.stderr)
+    os.killpg(process.pid, signal.SIGTERM)
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+    raise SystemExit(124)
+raise SystemExit(result)
+PY
+}
 
 case "${1:-help}" in
+    check)
+        check_with_deadline
+        ;;
+    __check_steps)
+        check_steps
+        ;;
+    bootstrap-release-gate)
+        bootstrap_release_gate
+        ;;
     deploy)
-        device="${2:-Starbuck}"
-        "$APP_PUBLISH/run" deploy "$device"
+        deploy_preflight
         ;;
-    status)
-        "$APP_PUBLISH/run" status
-        ;;
-    build)
-        "$APP_PUBLISH/run" build
-        ;;
-    upload)
-        "$APP_PUBLISH/run" upload
-        ;;
-    screenshots)
-        "$APP_PUBLISH/run" screenshots
+    health)
+        health_preflight
         ;;
     publish)
-        "$APP_PUBLISH/run" publish
+        "$(app_publish_run)" --project "$SCRIPT_DIR" publish
         ;;
-    help|*)
-        echo "Usage: run <command> [args]"
-        echo ""
-        echo "Commands:"
-        echo "  deploy [device]  - Deploy to iPhone (default: Starbuck)"
-        echo "  build            - Build IPA for App Store"
-        echo "  upload           - Upload to App Store Connect"
-        echo "  screenshots      - Capture screenshots"
-        echo "  status           - Show pipeline status"
-        echo "  publish          - Run full publish pipeline"
+    device)
+        "$(app_publish_run)" --project "$SCRIPT_DIR" deploy "${2:-Starbuck}"
+        ;;
+    status)
+        "$(app_publish_run)" --project "$SCRIPT_DIR" status
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "ERROR: unsupported command: $1" >&2
+        usage >&2
+        exit 2
         ;;
 esac
