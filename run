@@ -194,7 +194,7 @@ check_steps() {
     npx --no-install cap sync ios
 
     # Pre-boot the gate simulator so XCTest AX comes up warm.
-    SIM_NAME="iPhone 17 Pro"
+    SIM_NAME="iPhone 18 Pro"
     SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
     if [[ -z "${SIM_UDID:-}" ]]; then
         echo "ERROR: no available $SIM_NAME simulator is installed" >&2
@@ -213,7 +213,7 @@ check_steps() {
         -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
         -scheme App \
         -configuration Release \
-        -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+        -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=latest' \
         -derivedDataPath "$CHECK_DERIVED_DATA" \
         CODE_SIGNING_ALLOWED=NO \
         EXCLUDED_ARCHS=x86_64 \
