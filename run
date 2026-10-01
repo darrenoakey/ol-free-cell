@@ -188,40 +188,81 @@ PY
 
 check_steps() {
     cd "$SCRIPT_DIR"
-    node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web"
-    node --test tests/unit/
-    npm ci
-    npm audit
-    npm run test:bdd:web
-    npx --no-install cap sync ios
 
-    # The gate's own simulator, created on demand. iOS 18.0 renders this
-    # WebView; the iOS 27 simulator can show a blank page. Name is ol-free-cell-gate.
+    # V8 compile cache: collapses cucumber/playwright module-load time on warm
+    # worktrees (bdd-web spends ~40s loading modules, ~17s executing).
+    export NODE_COMPILE_CACHE="$SCRIPT_DIR/local/node-compile-cache"
+    # Per-step wall-clock instrumentation so slow releases are evidence, not
+    # guesswork. Lines go to stderr: [check-timing] NAME: Ns (total Ns)
+    CHECK_T0=$SECONDS
+    step() {
+        local name="$1"; shift
+        local t0=$SECONDS
+        "$@"
+        local rc=$?
+        echo "[check-timing] $name: $((SECONDS - t0))s (total $((SECONDS - CHECK_T0))s)" >&2
+        return $rc
+    }
+
+    # The gate's own simulator, created and booted in the background while the
+    # web/core steps run, so bootstatus overlaps them instead of serializing.
     SIM_NAME="ol-free-cell-gate"
     SIM_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
     SIM_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-0"
-    SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-    if [[ -z "${SIM_UDID:-}" ]]; then
-        xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
-            echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
-            exit 1
-        }
-        xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
+    SIM_UDID_FILE="$(mktemp -t ol-free-cell-sim-udid)"
+    (
         SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-    fi
-    if [[ -z "${SIM_UDID:-}" ]]; then
-        echo "ERROR: could not create the $SIM_NAME simulator" >&2
-        exit 1
-    fi
-    xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
-    xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
+        if [[ -z "$SIM_UDID" ]]; then
+            xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
+                echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
+                exit 1
+            }
+            xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
+            SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
+        fi
+        if [[ -z "$SIM_UDID" ]]; then
+            echo "ERROR: could not create the $SIM_NAME simulator" >&2
+            exit 1
+        fi
+        xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
+        xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
 
-    # Clear leftover UITest residue that can poison AX.
-    xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olGolf >/dev/null 2>&1 || true
-    xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olFreeCell >/dev/null 2>&1 || true
-    xcrun simctl terminate "$SIM_UDID" com.apple.springboard >/dev/null 2>&1 || true
+        # Clear leftover UITest residue that can poison AX.
+        xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olGolf >/dev/null 2>&1 || true
+        xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olFreeCell >/dev/null 2>&1 || true
+        xcrun simctl terminate "$SIM_UDID" com.apple.springboard >/dev/null 2>&1 || true
+        printf '%s\n' "$SIM_UDID" > "$SIM_UDID_FILE"
+    ) &
+    SIM_SETUP_PID=$!
 
-    xcodebuild \
+    step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web"
+    step unit-tests node --test tests/unit/
+
+    # npm ci only when dependencies actually changed; node_modules is kept warm
+    # in the persistent gate worktree. The hidden lockfile npm ci writes is the
+    # freshness marker.
+    if [[ ! -d node_modules ]] || [[ package-lock.json -nt node_modules/.package-lock.json ]]; then
+        step npm-ci npm ci
+    else
+        echo "[check-timing] npm-ci: skipped, node_modules matches package-lock.json (total $((SECONDS - CHECK_T0))s)" >&2
+    fi
+    step npm-audit npm audit
+
+    # The BDD web suite (chromium + node file server) shares no state with the
+    # native build (xcodebuild + simulator), so it runs concurrently and its
+    # result is reaped — and enforced — after the UI test.
+    mkdir -p "$SCRIPT_DIR/local"
+    BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
+    npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
+    BDD_WEB_PID=$!
+
+    step cap-sync npx --no-install cap sync ios
+
+    wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
+    SIM_UDID="$(cat "$SIM_UDID_FILE")"
+    rm -f "$SIM_UDID_FILE"
+
+    step ios-test xcodebuild \
         -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
         -scheme App \
         -configuration Release \
@@ -232,6 +273,12 @@ check_steps() {
         -parallel-testing-enabled NO \
         -only-testing:AppUITests \
         test
+    wait "$BDD_WEB_PID" || {
+        echo "ERROR: bdd-web failed; last output:" >&2
+        tail -n 40 "$BDD_WEB_LOG" >&2
+        exit 1
+    }
+    echo "[check-timing] bdd-web: done (see $BDD_WEB_LOG) (total $((SECONDS - CHECK_T0))s)" >&2
 }
 
 check_with_deadline() {
