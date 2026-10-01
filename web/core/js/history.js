@@ -20,6 +20,7 @@
     if (typeof record.gameId !== 'string' || !record.gameId) errors.push('gameId');
     if (typeof record.date !== 'string' || !DATE.test(record.date)) errors.push('date');
     if (typeof record.solved !== 'boolean') errors.push('solved');
+    if (record.status !== undefined && !['completed', 'failed', 'attempted'].includes(record.status)) errors.push('status');
     for (const field of ['ms', 'moves', 'hints', 'restarts', 'undos', 'score']) {
       if (record[field] !== undefined && record[field] !== null && !Number.isFinite(record[field])) errors.push(field);
     }
@@ -38,17 +39,30 @@
     return Object.values(raw).every((v) => v && typeof v === 'object' && !Array.isArray(v));
   }
 
+  function statusOf(day) {
+    if (!day || typeof day !== 'object') return 'completed';
+    if (day.status === 'completed' || day.status === 'failed' || day.status === 'attempted') return day.status;
+    if (day.status === 'won') return 'completed';
+    if (day.status === 'lost') return 'failed';
+    if (day.status === 'playing') return 'attempted';
+    if (typeof day.won === 'boolean') return day.won ? 'completed' : 'failed';
+    if (typeof day.solved === 'boolean') return day.solved ? 'completed' : 'failed';
+    return 'completed';
+  }
+
   function fromLegacyDay(appId, date, day) {
     const extra = {};
     if (day.solvedAt) extra.solvedAt = day.solvedAt;
     for (const k of Object.keys(day)) {
-      if (!DAY_FIELDS.includes(k)) extra[k] = day[k];
+      if (!DAY_FIELDS.includes(k) && k !== 'status' && k !== 'won') extra[k] = day[k];
     }
+    const status = statusOf(day);
     const rec = {
       schemaVersion: 1,
       gameId: appId,
       date,
-      solved: day.solved !== false,
+      solved: status === 'completed',
+      status,
       extra,
     };
     for (const field of ['ms', 'moves', 'hints', 'restarts', 'undos', 'score']) {
@@ -139,22 +153,84 @@
     return { doc, backup, marker, wrote: true };
   }
 
-  /** Day map the Spider stats screen and calendar already understand. */
+  function rowOf(rec) {
+    return {
+      ms: rec.ms,
+      moves: rec.moves,
+      restarts: rec.restarts,
+      undos: rec.undos,
+      hints: rec.hints,
+      solved: rec.solved !== false && rec.status !== 'failed' && rec.status !== 'attempted',
+      status: rec.status || (rec.solved === false ? 'failed' : 'completed'),
+      solvedAt: rec.extra && rec.extra.solvedAt,
+      extra: rec.extra || {},
+    };
+  }
+
+  /** Solved-day map the Spider stats screen already understands. */
   function toDayMap(doc) {
     const map = {};
     const records = Array.isArray(doc) ? doc : (doc && doc.records) || [];
     for (const rec of records) {
-      if (rec.solved === false) continue;
-      map[rec.date] = {
-        ms: rec.ms,
-        moves: rec.moves,
-        restarts: rec.restarts,
-        undos: rec.undos,
-        hints: rec.hints,
-        solvedAt: rec.extra && rec.extra.solvedAt,
-      };
+      if (rec.solved === false || rec.status === 'failed' || rec.status === 'attempted') continue;
+      map[rec.date] = rowOf(rec);
     }
     return map;
+  }
+
+  /** Every recorded day, including failed and attempted. Calendar uses this. */
+  function toStatusMap(doc) {
+    const map = {};
+    const records = Array.isArray(doc) ? doc : (doc && doc.records) || [];
+    for (const rec of records) map[rec.date] = rowOf(rec);
+    return map;
+  }
+
+  /**
+   * Calendar class for one day. Absent past days after firstSeen are missed.
+   * Absent days before firstSeen, and future days, are unattempted.
+   */
+  function dayStatus(rec, key, today, firstSeen) {
+    if (rec) {
+      if (rec.status === 'attempted') return 'attempted';
+      if (rec.status === 'failed' || rec.solved === false) return 'failed';
+      return 'solved';
+    }
+    if (key > today) return 'future';
+    if (key === today) return 'open';
+    if (firstSeen && key >= firstSeen && key < today) return 'missed';
+    return 'unattempted';
+  }
+
+  /** Sudoku's localStorage blob: { dailyCompleted: {date: {won, time}}, results? }. */
+  function sudokuMigrator(appId) {
+    return function migrateSudoku(raw) {
+      if (raw == null || raw === '') {
+        return { doc: { schemaVersion: 1, gameId: appId, records: [], legacyTotals: null }, from: 'empty' };
+      }
+      if (isCanonical(raw)) return { doc: raw, from: 'canonical' };
+      const completed = raw.dailyCompleted && typeof raw.dailyCompleted === 'object' ? raw.dailyCompleted : {};
+      const records = [];
+      for (const date of Object.keys(completed).sort()) {
+        if (!DATE.test(date)) continue;
+        const day = completed[date] || {};
+        const status = day.won ? 'completed' : 'failed';
+        const rec = {
+          schemaVersion: 1,
+          gameId: appId,
+          date,
+          solved: status === 'completed',
+          status,
+          extra: { source: 'sudoku_dailyCompleted' },
+        };
+        if (Number.isFinite(day.time)) rec.ms = day.time * 1000;
+        records.push(rec);
+      }
+      return {
+        doc: { schemaVersion: 1, gameId: appId, records, legacyTotals: null },
+        from: 'sudoku-local',
+      };
+    };
   }
 
   async function load(appId) {
@@ -193,11 +269,13 @@
   async function record(appId, partial) {
     await migrate(appId);
     const doc = await load(appId);
+    const status = partial.status || (partial.solved === false ? 'failed' : 'completed');
     const rec = {
       schemaVersion: 1,
       gameId: appId,
       date: partial.date,
-      solved: partial.solved !== false,
+      solved: status === 'completed',
+      status,
       extra: partial.extra || {},
     };
     for (const field of ['ms', 'moves', 'hints', 'restarts', 'undos', 'score']) {
@@ -205,17 +283,24 @@
     }
     const verdict = validate(rec);
     if (!verdict.ok) throw new Error(`invalid record: ${verdict.errors.join(',')}`);
-    if (!doc.records.some((row) => row.date === rec.date)) {
+    const rank = { attempted: 1, failed: 2, completed: 3 };
+    const existing = doc.records.find((row) => row.date === rec.date);
+    if (!existing) {
       doc.records.push(rec);
-      doc.records.sort((a, b) => (a.date < b.date ? -1 : 1));
-      await save(appId, doc);
+    } else if ((rank[status] || 0) > (rank[existing.status || (existing.solved === false ? 'failed' : 'completed')] || 0)) {
+      Object.assign(existing, rec);
+    } else {
+      return load(appId);
     }
+    doc.records.sort((a, b) => (a.date < b.date ? -1 : 1));
+    await save(appId, doc);
     return load(appId);
   }
 
   OL.History = {
     key, backupKey, markerKey, validate, normalize, isCanonical, isLegacyMap,
     legacyMapToCanonical, registerMigrator, legacyMapMigrator, migrateData,
-    toDayMap, load, save, migrate, record,
+    toDayMap, toStatusMap, dayStatus, statusOf, sudokuMigrator,
+    load, save, migrate, record,
   };
 })(globalThis);

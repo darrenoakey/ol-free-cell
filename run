@@ -227,10 +227,23 @@ check_steps() {
         xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
         xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
 
-        # Clear leftover UITest residue that can poison AX.
-        xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olGolf >/dev/null 2>&1 || true
-        xcrun simctl terminate "$SIM_UDID" com.darrenoakey.olFreeCell >/dev/null 2>&1 || true
-        xcrun simctl terminate "$SIM_UDID" com.apple.springboard >/dev/null 2>&1 || true
+        # simctl terminate can wedge CoreSimulator for minutes. It is cleanup
+        # only, so abandon it after a few seconds instead of holding the gate.
+        bounded_terminate() {
+            xcrun simctl terminate "$1" "$2" >/dev/null 2>&1 &
+            local pid=$! i=0
+            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 8 ]; do
+                sleep 1
+                i=$((i + 1))
+            done
+            if kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" 2>/dev/null || true
+                wait "$pid" 2>/dev/null || true
+            fi
+        }
+        bounded_terminate "$SIM_UDID" com.darrenoakey.olGolf
+        bounded_terminate "$SIM_UDID" com.darrenoakey.olFreeCell
+        bounded_terminate "$SIM_UDID" com.apple.springboard
         printf '%s\n' "$SIM_UDID" > "$SIM_UDID_FILE"
     ) &
     SIM_SETUP_PID=$!
@@ -258,6 +271,19 @@ check_steps() {
 
     step cap-sync npx --no-install cap sync ios
 
+    # simctl list/bootstatus can wedge for the whole check deadline. Setup is
+    # already running in the background; abandon it instead of holding the gate.
+    i=0
+    while kill -0 "$SIM_SETUP_PID" 2>/dev/null && [ "$i" -lt 90 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    if kill -0 "$SIM_SETUP_PID" 2>/dev/null; then
+        echo "ERROR: simulator setup exceeded 90s" >&2
+        pkill -TERM -P "$SIM_SETUP_PID" 2>/dev/null || true
+        kill "$SIM_SETUP_PID" 2>/dev/null || true
+        exit 1
+    fi
     wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
     SIM_UDID="$(cat "$SIM_UDID_FILE")"
     rm -f "$SIM_UDID_FILE"

@@ -1,6 +1,7 @@
-// stats.js — pure statistics over solved-day history. No I/O, no DOM.
+// stats.js — pure statistics over daily history. No I/O, no DOM.
 // Accepts a Spider day-map, a canonical document, or an array of records.
-// Records missing ms or moves are counted, not thrown.
+// Completed days drive streaks and times. Failed and attempted days stay in
+// played / win-rate counts and are never thrown away.
 (function (root) {
   'use strict';
 
@@ -20,6 +21,30 @@
     return history;
   }
 
+  function counts(rec) {
+    if (!rec || typeof rec !== 'object') return false;
+    if (rec.status === 'failed' || rec.status === 'attempted') return false;
+    if (rec.solved === false) return false;
+    return true;
+  }
+
+  function datedEntries(history) {
+    if (!history) return [];
+    if (Array.isArray(history)) return history.filter((rec) => rec && rec.date);
+    if (Array.isArray(history.records)) return history.records.filter((rec) => rec && rec.date);
+    return Object.entries(history)
+      .filter(([key, rec]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && rec && typeof rec === 'object')
+      .map(([date, rec]) => ({ date, ...rec }));
+  }
+
+  function isFailed(rec) {
+    return !!(rec && (rec.status === 'failed' || (rec.solved === false && rec.status !== 'attempted')));
+  }
+
+  function isAttempted(rec) {
+    return !!(rec && rec.status === 'attempted');
+  }
+
   function formatTime(ms) {
     if (ms === null || ms === undefined || !Number.isFinite(ms)) return '–';
     const total = Math.max(0, Math.floor(ms / 1000));
@@ -36,9 +61,11 @@
 
   function currentStreak(history, today) {
     const map = asMap(history);
-    let day = map[today] ? today : Prng.addDays(today, -1);
+    const todayRec = map[today];
+    if (todayRec && !counts(todayRec)) return 0;
+    let day = counts(todayRec) ? today : Prng.addDays(today, -1);
     let n = 0;
-    while (map[day]) {
+    while (counts(map[day])) {
       n++;
       day = Prng.addDays(day, -1);
     }
@@ -47,7 +74,7 @@
 
   function bestStreak(history) {
     const map = asMap(history);
-    const days = Object.keys(map).sort();
+    const days = Object.keys(map).filter((day) => counts(map[day])).sort();
     let best = 0;
     let run = 0;
     let prev = null;
@@ -68,9 +95,37 @@
     return { count: times.length, avg: sum / times.length, min: times[0], max: times[times.length - 1], median };
   }
 
+  function periodCounts(entries, today) {
+    const weekStart = Prng.weekStart(today);
+    const windows = {
+      week: (rec) => rec.date >= weekStart && rec.date <= today,
+      month: (rec) => rec.date.startsWith(today.slice(0, 7)),
+      year: (rec) => rec.date.startsWith(today.slice(0, 4)),
+      all: () => true,
+    };
+    const out = {};
+    for (const [name, match] of Object.entries(windows)) {
+      const rows = entries.filter(match);
+      const wins = rows.filter(counts).length;
+      const failed = rows.filter(isFailed).length;
+      const attempted = rows.filter(isAttempted).length;
+      const played = wins + failed + attempted;
+      const times = rows.filter((rec) => counts(rec) && Number.isFinite(rec.ms)).map((rec) => rec.ms);
+      out[name] = {
+        played,
+        wins,
+        failed,
+        winRate: played ? Math.round((wins / played) * 100) : 0,
+        avg: times.length ? times.reduce((sum, ms) => sum + ms, 0) / times.length : null,
+        best: times.length ? Math.min(...times) : null,
+      };
+    }
+    return out;
+  }
+
   function compute(history, today, legacyTotals) {
     const map = asMap(history);
-    const days = Object.keys(map).sort();
+    const days = Object.keys(map).filter((day) => counts(map[day])).sort();
     const records = days.map((d) => ({ date: d, ...map[d] }));
     const t = Prng.parseKey(today);
     const y = t.getFullYear();
@@ -123,8 +178,19 @@
       if (Number.isFinite(totals.bestStreak)) result.bestStreak = Math.max(result.bestStreak, totals.bestStreak);
       if (days.length === 0 && Number.isFinite(totals.currentStreak)) result.currentStreak = totals.currentStreak;
     }
+    const entries = datedEntries(history);
+    result.failed = entries.filter(isFailed).length;
+    result.attempted = entries.filter(isAttempted).length;
+    result.wins = result.total;
+    result.played = result.wins + result.failed + result.attempted;
+    result.winRate = result.played ? Math.round((result.wins / result.played) * 100) : 0;
+    result.periods = periodCounts(entries, today);
+    result.entries = entries;
     return result;
   }
 
-  root.OL.Stats = { compute, formatTime, timeSummary, currentStreak, bestStreak, daysInMonth, MONTHS, asMap };
+  root.OL.Stats = {
+    compute, formatTime, timeSummary, currentStreak, bestStreak, daysInMonth, MONTHS, asMap,
+    counts, datedEntries, periodCounts,
+  };
 })(globalThis);

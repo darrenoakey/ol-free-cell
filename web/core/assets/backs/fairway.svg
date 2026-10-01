@@ -1,0 +1,44 @@
+<svg viewBox="0 0 512 768" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4aa76c"/>
+      <stop offset="55%" stop-color="#35875a"/>
+      <stop offset="100%" stop-color="#256b46"/>
+    </linearGradient>
+    <pattern id="pinstripe" width="64" height="64" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="64" height="64" fill="none"/>
+      <rect x="0" width="10" height="64" fill="#ffffff" fill-opacity="0.07"/>
+      <rect x="32" width="4" height="64" fill="#ffffff" fill-opacity="0.05"/>
+    </pattern>
+    <linearGradient id="flagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8604f"/>
+      <stop offset="100%" stop-color="#c93a30"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="1.5" y="1.5" width="509" height="765" rx="34" fill="url(#bgGrad)"/>
+  <rect x="1.5" y="1.5" width="509" height="765" rx="34" fill="url(#pinstripe)"/>
+
+  <!-- centre emblem: golf flagstick and cup -->
+  <g>
+    <ellipse cx="256" cy="470" rx="86" ry="22" fill="#1d5c3c"/>
+    <ellipse cx="256" cy="464" rx="86" ry="22" fill="#2a724c"/>
+    <ellipse cx="256" cy="464" rx="60" ry="14" fill="#35875a"/>
+    <circle cx="256" cy="452" r="17" fill="#123c27"/>
+    <rect x="252" y="196" width="8" height="256" rx="4" fill="#f7f3e8"/>
+    <path d="M260,204 L348,230 L260,258 Z" fill="url(#flagGrad)"/>
+    <circle cx="256" cy="196" r="9" fill="#f7f3e8"/>
+  </g>
+
+  <!-- corner frames -->
+  <g stroke="#f7f3e8" stroke-opacity="0.85" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M44,70 Q44,44 70,44"/>
+    <path d="M468,70 Q468,44 442,44"/>
+    <path d="M44,698 Q44,724 70,724"/>
+    <path d="M468,698 Q468,724 442,724"/>
+  </g>
+
+  <rect x="10" y="10" width="492" height="748" rx="26" fill="none" stroke="#f7f3e8" stroke-opacity="0.9" stroke-width="3"/>
+  <rect x="20" y="20" width="472" height="728" rx="20" fill="none" stroke="#f7f3e8" stroke-opacity="0.35" stroke-width="1.6"/>
+  <rect x="1.5" y="1.5" width="509" height="765" rx="34" fill="none" stroke="#123c27" stroke-width="2.5" stroke-opacity="0.8"/>
+</svg>

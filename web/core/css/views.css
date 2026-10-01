@@ -21,6 +21,27 @@
 .cal-day.blank { background: none; background-color: transparent; border-color: transparent; }
 .cal-day.future { color: var(--ol-ink, var(--ink)); border-style: dashed; }
 .cal-day.missed { color: var(--ol-ink, var(--ink)); }
+.cal-day.failed {
+  color: #fff8f6;
+  background-color: #8d2f3b;
+  border-color: #5e1c26;
+}
+.cal-day.attempted {
+  color: var(--ol-ink, var(--ink));
+  border-style: dashed;
+  box-shadow: inset 0 0 0 1.5px var(--ol-gold, var(--gold));
+}
+.stats-table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; color: var(--ol-ink, var(--ink)); font-size: 13px; }
+.stats-table th, .stats-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--ol-surface-edge, transparent); }
+.awards { display: flex; flex-direction: column; gap: 8px; }
+.award {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border-radius: 12px;
+  background: var(--ol-surface); color: var(--ol-ink-dim, var(--ink-dim));
+  border: 1px solid var(--ol-surface-edge, transparent); opacity: 0.55;
+}
+.award.earned { opacity: 1; color: var(--ol-ink, var(--ink)); box-shadow: inset 3px 0 0 var(--ol-gold, var(--gold)); }
+.award small { color: var(--ol-ink-dim, var(--ink-dim)); }
 .cal-day.missed::after {
   content: '';
   position: absolute;

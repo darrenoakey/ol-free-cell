@@ -42,20 +42,14 @@
     return contrast(theme.ink, theme.bg) >= 4.5;
   }
 
-  /** Themes a descriptor may offer: contrast-safe, preferring suited ones first. */
+  /**
+   * Every contrast-safe theme, signature first. Games do not filter the
+   * catalogue. `suits` remains as provenance, not as a visibility gate.
+   */
   function forDescriptor(descriptor) {
-    const id = descriptor && descriptor.id;
-    const suited = [];
-    const rest = [];
-    for (const theme of ALL) {
-      if (!passes(theme)) continue;
-      if (theme.suits.includes(id) || (descriptor.hasCards && theme.suits.includes('cards') && descriptor.hasCards)) {
-        suited.push(theme);
-      } else {
-        rest.push(theme);
-      }
-    }
-    return suited.concat(rest);
+    const passing = ALL.filter(passes);
+    const sig = signature(descriptor);
+    return passing.filter((t) => t.id === sig).concat(passing.filter((t) => t.id !== sig));
   }
 
   function signature(descriptor) {

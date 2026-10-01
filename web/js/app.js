@@ -81,7 +81,7 @@ const App = {
   },
 
   dayMap() {
-    return OL.History.toDayMap(this.historyDoc);
+    return OL.History.toStatusMap(this.historyDoc);
   },
 
   recordFor(dateStr) {
@@ -98,18 +98,21 @@ const App = {
     }
     if (!cards) cards = 'classic';
     if (!finish) finish = 'natural';
-    this.applyLook(theme, cards, finish);
+    const back = await OL.Store.get(OL.Store.key(APP_ID, 'back'));
+    this.applyLook(theme, cards, finish, back);
   },
 
-  applyLook(themeId, cardsId, finishId) {
+  applyLook(themeId, cardsId, finishId, backId) {
     const theme = OL.Themes.BY_ID[themeId] ? themeId : 'emerald';
-    const cards = OL.Cards.dress($('board'), cardsId, finishId);
+    const back = backId || (this.look && this.look.back) || OL.Cards.defaultBack(cardsId);
+    const cards = OL.Cards.dress($('board'), cardsId, finishId, back);
     const finish = $('board').dataset.finish;
+    const usedBack = $('board').dataset.back;
     OL.Themes.apply(theme);
     document.body.classList.remove('theme-emerald', 'theme-midnight', 'theme-ol');
     if (theme === 'emerald' || theme === 'midnight') document.body.classList.add(`theme-${theme}`);
     else document.body.classList.add('theme-ol');
-    this.look = { theme, cards, finish };
+    this.look = { theme, cards, finish, back: usedBack };
     this.settings = { theme: theme === 'midnight' ? 'midnight' : 'emerald' };
     OL.Views.fillAppearance({
       themeList: $('theme-list'),
@@ -119,7 +122,7 @@ const App = {
       current: this.look,
     });
     const summary = $('look-summary');
-    if (summary) summary.textContent = OL.Views.summary(theme, cards, finish);
+    if (summary) summary.textContent = OL.Views.summary(theme, cards, finish, usedBack);
     UI.setThemeLabel(theme);
     if (this.game) UI.render(this.game, this.stats, this.context);
     return this.look;
@@ -129,6 +132,7 @@ const App = {
     await OL.Store.set(OL.Store.key(APP_ID, 'table'), this.look.theme);
     await OL.Store.set(OL.Store.key(APP_ID, 'cards'), this.look.cards);
     await OL.Store.set(OL.Store.key(APP_ID, 'finish'), this.look.finish);
+    await OL.Store.set(OL.Store.key(APP_ID, 'back'), this.look.back);
     if (this.look.theme === 'emerald' || this.look.theme === 'midnight') {
       await OL.Store.setJSON(SETTINGS_KEY, { theme: this.look.theme });
     }
@@ -149,12 +153,13 @@ const App = {
     }
     this.game = new Game.FreeCellGame(dealResult);
     const existing = this.recordFor(dateStr);
-    this._recordableOnFinish = !existing;
+    const won = existing && existing.solved !== false && existing.status !== 'failed' && existing.status !== 'attempted';
+    this._recordableOnFinish = !won;
     this.undos = 0;
     this.restarts = 0;
 
     let animateDeal = true;
-    if (!existing) {
+    if (!won) {
       const progress = await OL.Store.getJSON(PROGRESS_PREFIX + dateStr, null);
       if (progress) {
         this.game.restoreProgress(progress);
@@ -485,6 +490,12 @@ const App = {
       const btn = event.target.closest('.finish-pick');
       if (!btn || !OL.Cards.FINISH_BY_ID[btn.dataset.finish]) return;
       this.applyLook(this.look.theme, this.look.cards, btn.dataset.finish);
+      this.persistLook();
+    });
+    $('sheet-look').addEventListener('click', (event) => {
+      const btn = event.target.closest('.back-pick');
+      if (!btn || !OL.Cards.BACK_BY_ID[btn.dataset.back]) return;
+      this.applyLook(this.look.theme, this.look.cards, this.look.finish, btn.dataset.back);
       this.persistLook();
     });
     OL.Chrome.bindSheetDismiss(document);

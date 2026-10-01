@@ -42,28 +42,37 @@
     for (let day = 1; day <= n; day++) {
       const key = `${prefix}-${String(day).padStart(2, '0')}`;
       const rec = history[key];
+      const state = root.OL.History && root.OL.History.dayStatus
+        ? root.OL.History.dayStatus(rec, key, today, firstSeen)
+        : (rec ? 'solved' : (key > today ? 'future' : 'missed'));
       const cls = ['cal-day'];
       let extra = '';
       let label = `${longDate(key)}`;
-      if (rec) {
+      if (state === 'solved') {
         cls.push('solved');
         extra = `${mark}<span class="cal-time">${Stats.formatTime(rec.ms)}</span>`;
         label += `, solved in ${Stats.formatTime(rec.ms)}`;
-      } else if (key > today) {
+      } else if (state === 'failed') {
+        cls.push('failed');
+        label += ', failed';
+      } else if (state === 'attempted') {
+        cls.push('attempted');
+        label += ', in progress';
+      } else if (state === 'future') {
         cls.push('future');
-      } else if (key < today && firstSeen && key >= firstSeen) {
+      } else if (state === 'missed') {
         cls.push('missed');
-        label += ', not solved';
+        label += ', not attempted';
       }
       if (key === today) {
         cls.push('today');
-        if (!rec && todayOpen) cls.push('open');
+        if (state === 'open' && todayOpen) cls.push('open');
       }
       html += `<button class="${cls.join(' ')}" data-date="${key}" aria-label="${esc(label)}"><span>${day}</span>${extra}</button>`;
     }
     html += '</div>';
 
-    const monthRecs = Object.keys(history).filter((k) => k.startsWith(prefix)).map((k) => history[k]);
+    const monthRecs = Object.keys(history).filter((k) => k.startsWith(prefix) && history[k] && history[k].status !== 'failed' && history[k].status !== 'attempted' && history[k].solved !== false).map((k) => history[k]);
     const times = Stats.timeSummary(monthRecs);
     const possible = prefix === today.slice(0, 7) ? Number(today.slice(8)) : (prefix < today ? n : 0);
     html += '<div class="cal-summary">' +
@@ -77,12 +86,21 @@
   }
 
   function rootDetail(history, today, todayOpen) {
-    if (history[today]) return `Today solved in <strong>${Stats.formatTime(history[today].ms)}</strong>. See you tomorrow.`;
+    const rec = history[today];
+    if (rec && rec.status !== 'failed' && rec.status !== 'attempted' && rec.solved !== false) {
+      return `Today solved in <strong>${Stats.formatTime(rec.ms)}</strong>. See you tomorrow.`;
+    }
+    if (rec && rec.status === 'failed') return 'Today was not completed. The streak pauses here.';
+    if (rec && rec.status === 'attempted') return 'Today is in progress.';
     return todayOpen ? 'Today&rsquo;s deal is waiting. Tap any gold day for its details.' : 'Tap any gold day for its details.';
   }
 
   function dayDetail(history, key, today) {
     const rec = history[key];
+    if (rec && (rec.status === 'failed' || rec.solved === false)) {
+      return `${esc(longDate(key))}<br>Not completed.`;
+    }
+    if (rec && rec.status === 'attempted') return `${esc(longDate(key))}<br>Started, not finished.`;
     if (rec) {
       const bits = [`<strong>${Stats.formatTime(rec.ms)}</strong>`];
       if (Number.isFinite(rec.moves)) bits.push(`${rec.moves} moves`);
@@ -154,7 +172,25 @@
       tile(`${s.thisWeek}<small>/${s.thisWeekPossible}</small>`, 'This week') +
       tile(`${s.thisMonth}<small>/${s.thisMonthPossible}</small>`, 'This month') +
       tile(String(s.thisYear), 'This year') +
+      tile(String(s.played == null ? s.total : s.played), 'Played') +
+      tile(`${s.winRate == null ? 100 : s.winRate}%`, 'Win rate') +
       '</div>';
+    if (s.periods) {
+      html += '<div class="section-title">Periods</div><table class="stats-table"><tr><th></th><th>Played</th><th>Win%</th><th>Avg</th><th>Best</th></tr>';
+      for (const name of ['week', 'month', 'year', 'all']) {
+        const row = s.periods[name];
+        html += `<tr><td>${name}</td><td>${row.played}</td><td>${row.played ? row.winRate + '%' : '–'}</td><td>${Stats.formatTime(row.avg)}</td><td>${Stats.formatTime(row.best)}</td></tr>`;
+      }
+      html += '</table>';
+    }
+    if (root.OL.Awards) {
+      const awards = root.OL.Awards.evaluate(s);
+      html += '<div class="section-title">Awards</div><div class="awards">';
+      for (const award of awards) {
+        html += `<div class="award${award.earned ? ' earned' : ''}" data-award="${esc(award.id)}"><strong>${esc(award.name)}</strong><small>${esc(award.detail)}</small></div>`;
+      }
+      html += '</div>';
+    }
     if (wants(descriptor, 'time')) {
       html += '<div class="section-title">Solve times</div><div class="tiles">' +
         tile(Stats.formatTime(t.avg), 'Average', true) +
@@ -183,6 +219,23 @@
   function themeChoices(descriptor, override) {
     if (Array.isArray(override)) return override;
     return Themes.forDescriptor(descriptor || { id: 'olspider', hasCards: true });
+  }
+
+  function ensureBackList(cardList, backList) {
+    if (backList) return backList;
+    if (!cardList || !cardList.parentElement) return null;
+    let el = cardList.parentElement.querySelector('[data-ol-backs]');
+    if (!el) {
+      const kicker = document.createElement('p');
+      kicker.className = 'theme-kicker';
+      kicker.textContent = 'Backs';
+      el = document.createElement('div');
+      el.dataset.olBacks = '';
+      el.className = 'back-row';
+      cardList.parentElement.insertBefore(el, cardList);
+      cardList.parentElement.insertBefore(kicker, el);
+    }
+    return el;
   }
 
   function fillAppearance({ themeList, finishList, cardList, descriptor, current, themeKicker, finishKicker, cardKicker, themes }) {
@@ -226,6 +279,23 @@
         }
       }
     }
+    const backList = showCards ? ensureBackList(cardList, arguments[0].backList) : null;
+    if (backList) {
+      backList.textContent = '';
+      backList.hidden = !showCards;
+      for (const back of Cards.BACKS) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'back-pick';
+        btn.dataset.back = back.id;
+        btn.setAttribute('aria-label', `${back.name} back`);
+        btn.setAttribute('aria-pressed', back.id === (current.back || Cards.defaultBack(current.cards)) ? 'true' : 'false');
+        const name = document.createElement('span');
+        name.textContent = back.name;
+        btn.append(Cards.sampleDeck(current.cards, current.finish, [Cards.SAMPLE_IDS[0]], false, back.id), name);
+        backList.appendChild(btn);
+      }
+    }
     if (cardKicker) cardKicker.hidden = !showCards;
     if (cardList) {
       cardList.textContent = '';
@@ -248,12 +318,14 @@
     }
   }
 
-  function summary(themeId, cardsId, finishId) {
+  function summary(themeId, cardsId, finishId, backId) {
     const theme = Themes.BY_ID[themeId] || Themes.BY_ID.twilight;
     const look = Cards.STYLE_BY_ID[cardsId] || Cards.STYLE_BY_ID.original;
     const finish = Cards.FINISH_BY_ID[finishId] || Cards.FINISH_BY_ID.natural;
     const finishName = finish.id === 'natural' ? '' : ` · ${finish.name}`;
-    return `${theme.name} · ${look.name}${finishName}`;
+    const back = backId && Cards.BACK_BY_ID[backId];
+    const backName = back && back.id !== Cards.defaultBack(look) ? ` · ${back.name} back` : '';
+    return `${theme.name} · ${look.name}${finishName}${backName}`;
   }
 
   root.OL.Views = {

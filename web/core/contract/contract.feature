@@ -9,3 +9,7 @@ Feature: OL daily contract
     Then stats tiles are present
     When the appearance sheet is opened
     Then the appearance sheet lists looks and themes
+
+  Scenario: face-down cards reveal nothing
+    Given the daily app is open
+    Then face-down cards reveal nothing

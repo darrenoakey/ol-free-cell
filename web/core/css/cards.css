@@ -89,7 +89,8 @@
 .card.up.court { background-image: linear-gradient(180deg, #fffdf7 0%, #faf2de 55%, #f1e3bf 100%); }
 .card.suit-0, .card.suit-3 { color: var(--spade); }
 .card.suit-1, .card.suit-2 { color: var(--heart); }
-.card.down > * { display: none; }
+/* The rule that actually hides a face-down card is at the end of this file.
+   It has to beat later, equal-specificity look rules such as Classic's corner. */
 
 .index, .pips, .court-art, .bigsu { display: none; }
 
@@ -494,44 +495,14 @@
   background: url("../assets/backs/classic.svg") center / 100% 100% no-repeat;
   box-shadow: 0 0 0 1px #f6f0e4, 0 1px 2px rgba(0,0,0,.35);
 }
-[data-layout="classic"] .pip, [data-layout="classic"] .face-letter,
-[data-layout="classic"] .index, [data-layout="classic"] .pips, [data-layout="classic"] .bigsu { display: none; }
-/* Markup index sits in the visible strip. A white plate covers the PNG
-   letters so a short fan cannot turn J into I or Q into O. */
-[data-layout="classic"] .card.up::before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  top: 0;
-  width: 48%;
-  height: 36%;
-  background: #fff;
-  pointer-events: none;
-}
-[data-layout="classic"] .corner {
-  display: flex;
-  z-index: 2;
-  left: 2px;
-  top: 1px;
-  right: auto;
-  width: max-content;
-  max-width: calc(100% - 4px);
-  padding: 0 2px 1px;
-  background: #fff;
-  line-height: 1;
-  gap: 1px;
-}
-[data-layout="classic"] .corner .r {
-  font-size: calc(var(--cw, 40px) * 0.34);
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-[data-layout="classic"] .corner .s {
-  font-size: calc(var(--cw, 40px) * 0.26);
-  margin-left: 0;
-  line-height: 1;
-}
+/* The PNG already carries its index and border. A markup corner or a white
+   plate cuts that border and covers the native pip, so Classic paints neither. */
+[data-layout="classic"] .corner,
+[data-layout="classic"] .pip,
+[data-layout="classic"] .face-letter,
+[data-layout="classic"] .index,
+[data-layout="classic"] .pips,
+[data-layout="classic"] .bigsu { display: none; }
 [data-cards="classic"] .card.up[data-suit="0"][data-rank="1"] {
   background: url("../assets/decks/classic/spades_A.png") center / 100% 100% no-repeat;
 }
@@ -688,3 +659,47 @@
 [data-cards="classic"] .card.up[data-suit="3"][data-rank="13"] {
   background: url("../assets/decks/classic/clubs_K.png") center / 100% 100% no-repeat;
 }
+
+/* Face-down cards reveal nothing. This is last, and !important, so a later
+   equal-specificity look rule (Classic's corner was display:flex) cannot
+   print rank, suit, pips, letters, or a pseudo overlay on a back. The card's
+   own background — the back — is not a child, so it stays. */
+.card.down > *,
+.card.down::before,
+.card.down::after {
+  display: none !important;
+}
+
+/* An explicit back wins over the look's paired back. Listed last so equal
+   specificity still lets the player put Fairway on a Spider face, or the
+   Original pattern on Classic. */
+[data-back="original"] .card.down {
+  background-color: #2b2070;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56' fill='none' stroke='%23e9c46a' stroke-opacity='.55' stroke-width='.6'%3E%3Crect x='3' y='3' width='34' height='50' rx='3' stroke-opacity='.8'/%3E%3Cpath d='M20 6V50M5 28H35M8 12l24 32M32 12 8 44'/%3E%3Cpath d='M20 13 26 16 30 22 31 28 30 34 26 40 20 43 14 40 10 34 9 28 10 22 14 16Z'/%3E%3Cpath d='M20 20 23 22 25 25 26 28 25 31 23 34 20 36 17 34 15 31 14 28 15 25 17 22Z'/%3E%3Ccircle cx='20' cy='28' r='1.6' fill='%23e9c46a' fill-opacity='.8' stroke='none'/%3E%3C/svg%3E"),
+    radial-gradient(120% 80% at 50% 20%, #4a3aa0 0%, #2b2070 55%, #1a1450 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+[data-back="index"] .card.down { background-image: url("../assets/backs/index.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="picture"] .card.down { background-image: url("../assets/backs/picture.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="bust"] .card.down { background-image: url("../assets/backs/bust.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="cropped"] .card.down { background-image: url("../assets/backs/cropped.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="jewel"] .card.down { background-image: url("../assets/backs/jewel.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="noir"] .card.down { background-image: url("../assets/backs/noir.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="vintage"] .card.down { background-image: url("../assets/backs/vintage.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="deco"] .card.down { background-image: url("../assets/backs/deco.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="pastel"] .card.down { background-image: url("../assets/backs/pastel.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="neon"] .card.down { background-image: url("../assets/backs/neon.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="classic"] .card.down { background-image: url("../assets/backs/classic.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="fairway"] .card.down { background-image: url("../assets/backs/fairway.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+.back-row { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
+.back-pick {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 14px; text-align: left;
+  background-color: var(--ol-surface, var(--glass));
+  border: 1px solid var(--ol-surface-edge, var(--glass-edge));
+  color: var(--ol-ink, var(--ink));
+}
+.back-pick[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }

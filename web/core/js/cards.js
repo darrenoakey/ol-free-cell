@@ -48,6 +48,38 @@
   ];
   const FINISH_BY_ID = Object.fromEntries(FINISHES.map((f) => [f.id, f]));
 
+  /**
+   * Every distinct shipped back. Spider's Original, Straight and Clear looks
+   * share one CSS back, so it is listed once. FreeCell's card-back.svg is
+   * byte-identical to classic.svg. Golf's card-back.svg is Fairway.
+   * Bridge, FreeCell, Golf and Classic faces are one PNG deck.
+   * ol-bridge/cardmaker archives are a design tool, not a shipped look.
+   */
+  const BACKS = [
+    { id: 'original', name: 'Original', file: null, sources: ['ol-spider'] },
+    { id: 'index', name: 'Index', file: 'index.svg', sources: ['ol-spider'] },
+    { id: 'picture', name: 'Picture', file: 'picture.svg', sources: ['ol-spider'] },
+    { id: 'bust', name: 'Bust', file: 'bust.svg', sources: ['ol-spider'] },
+    { id: 'cropped', name: 'Cropped', file: 'cropped.svg', sources: ['ol-spider'] },
+    { id: 'jewel', name: 'Jewel', file: 'jewel.svg', sources: ['ol-spider'] },
+    { id: 'noir', name: 'Noir', file: 'noir.svg', sources: ['ol-spider'] },
+    { id: 'vintage', name: 'Vintage', file: 'vintage.svg', sources: ['ol-spider'] },
+    { id: 'deco', name: 'Deco', file: 'deco.svg', sources: ['ol-spider'] },
+    { id: 'pastel', name: 'Pastel', file: 'pastel.svg', sources: ['ol-spider'] },
+    { id: 'neon', name: 'Neon', file: 'neon.svg', sources: ['ol-spider'] },
+    { id: 'classic', name: 'Classic', file: 'classic.svg', sources: ['ol-bridge', 'ol-free-cell', 'ol-core'] },
+    { id: 'fairway', name: 'Fairway', file: 'fairway.svg', sources: ['ol-golf'] },
+  ];
+  const BACK_BY_ID = Object.fromEntries(BACKS.map((b) => [b.id, b]));
+
+  /** The back a look wears until the player picks another. */
+  function defaultBack(styleOrId) {
+    const style = typeof styleOrId === 'string' ? (STYLE_BY_ID[styleOrId] || STYLE_BY_ID.original) : styleOrId;
+    if (style.back && BACK_BY_ID[style.back]) return style.back;
+    if (BACK_BY_ID[style.id] && BACK_BY_ID[style.id].file) return style.id;
+    return 'original';
+  }
+
   /** The four cards every look is previewed with: an ace, the busiest number card, two pictures. */
   const SAMPLE_IDS = [0, 22, 50, 38]; // A♠  10♥  Q♣  K♦
 
@@ -191,21 +223,22 @@
     return el;
   }
 
-  /** Point a deck at a look and a finish. Unknown ids fall back to Original / Natural. */
-  function dress(deck, id, finish) {
+  /** Point a deck at a look, a finish, and an optional back. Unknown ids fall back. */
+  function dress(deck, id, finish, back) {
     const style = STYLE_BY_ID[id] || STYLE_BY_ID.original;
     deck.dataset.cards = style.id;
     deck.dataset.layout = style.layout;
     deck.dataset.court = style.court || 'double';
     deck.dataset.finish = (FINISH_BY_ID[finish] || FINISH_BY_ID.natural).id;
+    deck.dataset.back = (BACK_BY_ID[back] || BACK_BY_ID[defaultBack(style)]).id;
     return style.id;
   }
 
   /** One picker row's cards: the back, then the four sample faces — all real cards. */
-  function sampleDeck(id, finish, ids, noBack) {
+  function sampleDeck(id, finish, ids, noBack, back) {
     const deck = document.createElement('span');
     deck.className = 'look-cards';
-    dress(deck, id, finish);
+    dress(deck, id, finish, back);
     if (!noBack) {
       const back = document.createElement('div');
       back.className = 'card down';
@@ -229,9 +262,12 @@
    * Minimum face-up fan, in pixels, that keeps the rank and suit index
    * inside the visible strip. `cardHeight` is the rendered card height.
    * Width is taken as the wider Spider aspect (height / 1.45) so FreeCell
-   * and Golf, which are narrower, still fit. Classic uses the markup index
-   * painted over the PNG, not the buried PNG letters.
+   * and Golf, which are narrower, still fit. Classic has no markup index:
+   * the PNG's own rank and suit pip end at y=240 of the 768px art (the
+   * jack's hook; a ten ends higher). The fan must keep that strip visible.
    */
+  const CLASSIC_INDEX_BOTTOM = 240 / 768;
+
   function minStackOffset(look, cardHeight) {
     const ch = Number(cardHeight);
     if (!Number.isFinite(ch) || ch <= 0) return 0;
@@ -246,7 +282,7 @@
     } else if (layout === 'bold') {
       bottom = 2 + cw * 0.38 + 4;
     } else if (layout === 'classic') {
-      bottom = 1 + cw * 0.34 + 4;
+      bottom = ch * CLASSIC_INDEX_BOTTOM + 2;
     } else {
       bottom = 1 + cw * 0.40 + 4;
     }
@@ -262,6 +298,7 @@
 
   const Cards = {
     SUITS, SUIT_GLYPH, RANK_LABEL, STYLES, STYLE_BY_ID, FINISHES, FINISH_BY_ID,
+    BACKS, BACK_BY_ID, defaultBack,
     SAMPLE_IDS, PIPS, installDefs, cardElement, dress, sampleDeck, faceMarkup,
     cardFromId, resolveCard, setGeometry, minStackOffset,
   };
