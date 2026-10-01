@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 58" preserveAspectRatio="none">
+<rect width="40" height="58" fill="#f4f7fc"/>
+<rect x="1.6" y="1.6" width="36.8" height="54.8" rx="2.6" fill="#274a8f"/>
+<clipPath id="c"><rect x="4.2" y="4.2" width="31.6" height="49.6" rx="1.4"/></clipPath>
+<g clip-path="url(#c)"><rect x="4" y="4" width="32" height="50" fill="#1c3a75"/><path d="M-60 -2L2 60M2 -2L-60 60M-53.5 -2L8.5 60M8.5 -2L-53.5 60M-47.0 -2L15.0 60M15.0 -2L-47.0 60M-40.5 -2L21.5 60M21.5 -2L-40.5 60M-34.0 -2L28.0 60M28.0 -2L-34.0 60M-27.5 -2L34.5 60M34.5 -2L-27.5 60M-21.0 -2L41.0 60M41.0 -2L-21.0 60M-14.5 -2L47.5 60M47.5 -2L-14.5 60M-8.0 -2L54.0 60M54.0 -2L-8.0 60M-1.5 -2L60.5 60M60.5 -2L-1.5 60M5.0 -2L67.0 60M67.0 -2L5.0 60M11.5 -2L73.5 60M73.5 -2L11.5 60M18.0 -2L80.0 60M80.0 -2L18.0 60M24.5 -2L86.5 60M86.5 -2L24.5 60M31.0 -2L93.0 60M93.0 -2L31.0 60M37.5 -2L99.5 60M99.5 -2L37.5 60M44.0 -2L106.0 60M106.0 -2L44.0 60M50.5 -2L112.5 60M112.5 -2L50.5 60M57.0 -2L119.0 60M119.0 -2L57.0 60M63.5 -2L125.5 60M125.5 -2L63.5 60M70.0 -2L132.0 60M132.0 -2L70.0 60M76.5 -2L138.5 60M138.5 -2L76.5 60M83.0 -2L145.0 60M145.0 -2L83.0 60M89.5 -2L151.5 60M151.5 -2L89.5 60M96.0 -2L158.0 60M158.0 -2L96.0 60" stroke="#8fb0ea" stroke-opacity=".55" stroke-width=".5" fill="none"/></g>
+<rect x="4.2" y="4.2" width="31.6" height="49.6" rx="1.4" fill="none" stroke="#f4f7fc" stroke-width=".6"/>
+<circle cx="20" cy="29" r="12.2" fill="#f4f7fc"/>
+<circle cx="20" cy="29" r="9.6" fill="#274a8f"/>
+<circle cx="20" cy="29" r="9.6" fill="none" stroke="#f4f7fc" stroke-width=".5"/>
+<circle cx="20" cy="26.2" r="3" fill="#f4f7fc"/>
+<path d="M13.2 37.4c.5-4.4 3.2-6.6 6.8-6.6s6.3 2.2 6.8 6.6a9.6 9.6 0 0 1-13.6 0Z" fill="#f4f7fc"/>
+</svg>

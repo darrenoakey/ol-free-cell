@@ -1,0 +1,654 @@
+/* OL Spider — card looks.
+   A deck is any element carrying data-cards (the look) and data-layout (how a
+   face is arranged): the board is one, and so is every row of the card picker,
+   so a preview is always the real card. Card SIZE is never set here — it comes
+   from --cw/--ch, which the board owns.
+
+   Layouts
+     modern  corner rank + suit, one big glyph (Original, Straight, Clear)
+     index   corner index over one big centre suit
+     trad    traditional: index, true pip layouts, drawn court figures
+     bold    index across the top, one big suit (courts: a big letter)
+   and, on a trad deck, data-court picks the court figure:
+     double  mirrored half-figures, like a traditional pack
+     bust    one head-and-torso cameo in a round frame
+     cut     one larger figure whose torso runs off the bottom edge
+   data-finish (natural / moody / stark) is how any look is lit.
+
+   The face itself lives here, not in a host stylesheet. A deck with no
+   --cw/--ch still paints an ivory card; the board or .look-cards sets the size. */
+
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cw, 40px);
+  height: var(--ch, 58px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.card.up {
+  background-color: var(--card);
+  background-image: linear-gradient(180deg, #fffdf7 0%, var(--card) 60%, #f3ecdc 100%);
+  box-shadow: 0 0 0 0.5px rgba(80, 60, 20, 0.35), 0 1.5px 3px rgba(5, 2, 20, 0.35);
+}
+.card.down {
+  background-color: #2b2070;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56' fill='none' stroke='%23e9c46a' stroke-opacity='.55' stroke-width='.6'%3E%3Crect x='3' y='3' width='34' height='50' rx='3' stroke-opacity='.8'/%3E%3Cpath d='M20 6V50M5 28H35M8 12l24 32M32 12 8 44'/%3E%3Cpath d='M20 13 26 16 30 22 31 28 30 34 26 40 20 43 14 40 10 34 9 28 10 22 14 16Z'/%3E%3Cpath d='M20 20 23 22 25 25 26 28 25 31 23 34 20 36 17 34 15 31 14 28 15 25 17 22Z'/%3E%3Ccircle cx='20' cy='28' r='1.6' fill='%23e9c46a' fill-opacity='.8' stroke='none'/%3E%3C/svg%3E"),
+    radial-gradient(120% 80% at 50% 20%, #4a3aa0 0%, #2b2070 55%, #1a1450 100%);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: 0 0 0 0.5px rgba(233, 196, 106, 0.45), 0 1.5px 3px rgba(0, 0, 0, 0.45);
+}
+.card .corner {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  right: 2px;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  line-height: 1;
+  pointer-events: none;
+}
+.card .r {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: calc(var(--cw, 40px) * 0.40);
+  letter-spacing: -0.04em;
+}
+.card .s { font-size: calc(var(--cw, 40px) * 0.33); margin-left: auto; }
+.card .pip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--ch, 58px) * 0.08);
+  text-align: center;
+  font-size: calc(var(--cw, 40px) * 0.72);
+  line-height: 1;
+  opacity: 0.92;
+  pointer-events: none;
+}
+.card .face-letter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--ch, 58px) * 0.12);
+  text-align: center;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-style: italic;
+  font-size: calc(var(--cw, 40px) * 0.62);
+  line-height: 1;
+  pointer-events: none;
+}
+.card.court .pip { display: none; }
+.card.up.court { background-image: linear-gradient(180deg, #fffdf7 0%, #faf2de 55%, #f1e3bf 100%); }
+.card.suit-0, .card.suit-3 { color: var(--spade); }
+.card.suit-1, .card.suit-2 { color: var(--heart); }
+.card.down > * { display: none; }
+
+.index, .pips, .court-art, .bigsu { display: none; }
+
+/* ---------- shared pieces ---------- */
+.index {
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.82;
+  font-family: var(--serif);
+  font-weight: 700;
+  pointer-events: none;
+}
+.index b { font-size: calc(var(--cw) * 0.27); letter-spacing: -0.06em; }
+.index .su { width: calc(var(--cw) * 0.19); height: calc(var(--cw) * 0.19); margin-top: calc(var(--cw) * 0.03); }
+.su, .bigsu { fill: currentColor; }
+.pips { position: absolute; inset: 0; pointer-events: none; }
+.pp { position: absolute; transform: translate(-50%, -50%); line-height: 0; }
+.pp .su { width: calc(var(--cw) * var(--pp)); height: calc(var(--cw) * var(--pp)); }
+.court-art {
+  position: absolute;
+  left: calc(var(--cw) * 0.34);
+  top: 50%;
+  width: calc(var(--cw) * 0.6);
+  height: calc(var(--cw) * 1.05);
+  margin-top: calc(var(--cw) * -0.525);
+  pointer-events: none;
+}
+.court-art.bust {
+  left: calc(var(--cw) * 0.07);
+  top: calc(var(--ch) * 0.27);
+  width: calc(var(--cw) * 0.86);
+  height: calc(var(--cw) * 0.86);
+  margin: 0;
+}
+.court-art.cut {
+  left: 0;
+  top: auto;
+  bottom: 0;
+  width: var(--cw);
+  height: calc(var(--ch) * 0.64);
+  margin: 0;
+}
+.pane { fill: var(--pane, transparent); }
+.ring { fill: none; stroke: var(--trim); stroke-width: 0.5; }
+/* Court figure colours (these classes live inside the <symbol>s, so they read
+   the deck's palette through inheritance). */
+.cr { fill: currentColor; stroke: var(--cline); stroke-width: 0.3; }
+.ct { fill: var(--trim); stroke: var(--cline); stroke-width: 0.28; }
+.ck { fill: var(--skin); stroke: var(--cline); stroke-width: 0.28; }
+.ch { fill: var(--hair); stroke: var(--cline); stroke-width: 0.28; }
+.cn { fill: var(--cline); }
+.cs { fill: none; stroke: var(--trim); stroke-linecap: round; }
+.ce { fill: var(--trim); }
+
+/* Every face-up card draws its edge from --edge (each look sets its own), so a
+   finish can restyle it. The hint glow and the drag lift are re-stated at the
+   end of this file with a higher specificity: they must win over any look. */
+[data-cards] .card.up {
+  box-shadow: var(--edge, 0 0 0 0.5px rgba(80, 60, 20, 0.35), 0 1.5px 3px rgba(5, 2, 20, 0.35));
+}
+
+/* ---------- modern family (Original is the base look in style.css) ---------- */
+[data-cards="straight"] .face-letter { font-style: normal; }
+[data-cards="clear"] .face-letter { font-style: normal; font-size: calc(var(--cw) * 0.68); }
+[data-cards="clear"] .card .s { display: none; }
+[data-cards="clear"] .card .r { font-size: calc(var(--cw) * 0.46); }
+[data-cards="clear"] .card.up:not(.court) .pip { font-size: calc(var(--cw) * 0.82); }
+
+/* ---------- index ---------- */
+[data-layout="index"] .card.up .corner,
+[data-layout="index"] .face-letter { display: none; }
+[data-layout="index"] .card.up .index { display: flex; left: 3px; top: 2px; }
+[data-layout="index"] .index b { font-size: calc(var(--cw) * 0.34); }
+[data-layout="index"] .index .su { width: calc(var(--cw) * 0.2); height: calc(var(--cw) * 0.2); }
+[data-layout="index"] .card.up .pip { display: block; top: 46%; bottom: auto; font-size: calc(var(--cw) * 0.62); }
+[data-cards="index"] { --edge: 0 0 0 1px #1a1a1a, 0 1px 2px rgba(0, 0, 0, 0.25); }
+[data-layout="index"] .card.up { background: #fff; }
+[data-layout="index"] .card.suit-0, [data-layout="index"] .card.suit-3 { color: #111; }
+[data-layout="index"] .card.suit-1, [data-layout="index"] .card.suit-2 { color: #d0122d; }
+
+/* ---------- shared by the drawn looks ---------- */
+[data-layout="trad"] .card.up .corner,
+[data-layout="trad"] .card.up .pip,
+[data-layout="trad"] .card.up .face-letter,
+[data-layout="bold"] .card.up .corner,
+[data-layout="bold"] .card.up .pip { display: none; }
+[data-layout="trad"] .card.up .index,
+[data-layout="bold"] .card.up .index { display: flex; }
+[data-layout="trad"] .card.up:not(.court) .pips { display: block; }
+[data-layout="trad"][data-court="double"] .card.court.up .court-art.double,
+[data-layout="trad"][data-court="bust"] .card.court.up .court-art.bust,
+[data-layout="trad"][data-court="cut"] .card.court.up .court-art.cut { display: block; }
+[data-court="cut"] .card.court.up { overflow: hidden; }
+[data-layout="trad"][data-court="bust"] .card.court.up .bigsu,
+[data-layout="trad"][data-court="cut"] .card.court.up .bigsu {
+  display: block;
+  position: absolute;
+  right: calc(var(--cw) * 0.08);
+  top: calc(var(--ch) * 0.045);
+  width: calc(var(--cw) * 0.22);
+  height: calc(var(--cw) * 0.22);
+  pointer-events: none;
+}
+[data-layout="bold"] .card.up .bigsu { display: block; }
+[data-layout="trad"] .card.up,
+[data-layout="bold"] .card.up { background: var(--face); }
+[data-layout="trad"] .card.suit-0, [data-layout="bold"] .card.suit-0 { color: var(--i0); }
+[data-layout="trad"] .card.suit-1, [data-layout="bold"] .card.suit-1 { color: var(--i1); }
+[data-layout="trad"] .card.suit-2, [data-layout="bold"] .card.suit-2 { color: var(--i2); }
+[data-layout="trad"] .card.suit-3, [data-layout="bold"] .card.suit-3 { color: var(--i3); }
+[data-layout="trad"] .card.down,
+[data-layout="bold"] .card.down { background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+
+/* traditional: the index sits left, the pips and court figure on the right */
+[data-layout="trad"] .index b { font-size: calc(var(--cw) * 0.27); }
+[data-layout="trad"] .card[data-rank="10"] .index b { letter-spacing: -0.1em; font-size: calc(var(--cw) * 0.25); }
+
+/* bold: index runs across the top, one big suit below */
+[data-layout="bold"] .index { flex-direction: row; align-items: center; gap: calc(var(--cw) * 0.03); left: 3px; top: 2px; line-height: 1; }
+[data-layout="bold"] .index b { font-size: calc(var(--cw) * 0.38); letter-spacing: -0.05em; }
+[data-layout="bold"] .index .su { width: calc(var(--cw) * 0.22); height: calc(var(--cw) * 0.22); margin: 0; }
+[data-layout="bold"] .bigsu {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--cw) * 0.62);
+  height: calc(var(--cw) * 0.62);
+  margin: calc(var(--cw) * -0.2) 0 0 calc(var(--cw) * -0.31);
+  pointer-events: none;
+}
+[data-layout="bold"] .card[data-rank="1"] .bigsu {
+  width: calc(var(--cw) * 0.82);
+  height: calc(var(--cw) * 0.82);
+  margin: calc(var(--cw) * -0.3) 0 0 calc(var(--cw) * -0.41);
+}
+[data-layout="bold"] .card.court.up .bigsu {
+  top: auto;
+  bottom: calc(var(--ch) * 0.07);
+  width: calc(var(--cw) * 0.34);
+  height: calc(var(--cw) * 0.34);
+  margin: 0 0 0 calc(var(--cw) * -0.17);
+}
+[data-layout="bold"] .card.court.up .face-letter {
+  display: block;
+  top: 25%;
+  bottom: auto;
+  font-style: normal;
+  font-weight: 700;
+  font-size: calc(var(--cw) * 0.78);
+}
+
+/* ---------- Picture: a clean traditional pack ---------- */
+[data-cards="picture"] {
+  --face: #fff;
+  --edge: 0 0 0 1px #1a1a1a, 0 1px 2px rgba(0, 0, 0, 0.28);
+  --i0: #161616; --i1: #c8102e; --i2: #c8102e; --i3: #161616;
+  --trim: #e0a800; --skin: #f6d9c2; --hair: #8a6a3a; --cline: #1a1a1a;
+}
+[data-cards="picture"] .card.down {
+  background-image: url("../assets/backs/picture.svg");
+  box-shadow: 0 0 0 1px #f6f0e4, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+[data-cards="index"] .card.down {
+  background: url("../assets/backs/index.svg") center / 100% 100% no-repeat;
+  box-shadow: 0 0 0 1px #f6d5d8, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Bust: the top of the person, framed like a cameo ---------- */
+[data-cards="bust"] {
+  --face: #fff;
+  --edge: 0 0 0 1px #1c2230, 0 1px 2px rgba(0, 0, 0, 0.3);
+  --i0: #141a2c; --i1: #d3203b; --i2: #d3203b; --i3: #141a2c;
+  --trim: #e7b422; --skin: #f7d8c0; --hair: #7a5430; --cline: #141a2c;
+  --pane: #dfe8f6;
+}
+[data-cards="bust"] .card.down {
+  background-image: url("../assets/backs/bust.svg");
+  box-shadow: 0 0 0 1px #f4f7fc, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Cropped: a large figure, cut off by the bottom of the card ---------- */
+[data-cards="cropped"] {
+  --face: linear-gradient(180deg, #fffefb 0%, #faf6ec 100%);
+  --edge: 0 0 0 1px #2a2118, 0 1px 2px rgba(0, 0, 0, 0.3);
+  --i0: #17140f; --i1: #c4182f; --i2: #c4182f; --i3: #17140f;
+  --trim: #e2ad1f; --skin: #f5d3b6; --hair: #5d3b1e; --cline: #17140f;
+}
+[data-cards="cropped"] .card.down {
+  background-image: url("../assets/backs/cropped.svg");
+  box-shadow: 0 0 0 1px #f3e2c4, 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Jewel: four colours, so every suit is told apart at a glance ---------- */
+[data-cards="jewel"] {
+  --face: linear-gradient(180deg, #ffffff 0%, #f3f5fa 100%);
+  --edge: 0 0 0 0.6px rgba(26, 36, 70, 0.55), 0 1.5px 3px rgba(4, 8, 24, 0.4);
+  --i0: #1b2038; --i1: #d3173b; --i2: #1664d9; --i3: #0d8b47;
+  --trim: #e3a928; --skin: #f8dcc8; --hair: #6b4a2b; --cline: #1b2038;
+}
+[data-cards="jewel"] .card.down {
+  background-image: url("../assets/backs/jewel.svg");
+  box-shadow: 0 0 0 0.6px rgba(232, 193, 90, 0.7), 0 1.5px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Noir: black cards, gold line ---------- */
+[data-cards="noir"] {
+  --face: linear-gradient(180deg, #23232e 0%, #0f0f16 100%);
+  --edge: 0 0 0 1px #c9a24a, 0 1.5px 3px rgba(0, 0, 0, 0.55);
+  --i0: #f3ead2; --i1: #ff5a70; --i2: #ff5a70; --i3: #f3ead2;
+  --trim: #d6b25e; --skin: #ead3b0; --hair: #b99d62; --cline: #0f0f16;
+}
+[data-cards="noir"] .index { font-family: 'Didot', 'Bodoni 72', 'Bodoni MT', var(--serif); }
+[data-cards="noir"] .card.down {
+  background-image: url("../assets/backs/noir.svg");
+  box-shadow: 0 0 0 1px #c9a24a, 0 1.5px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Vintage: aged paper, ink and brick ---------- */
+[data-cards="vintage"] {
+  --face: radial-gradient(120% 95% at 50% 38%, #f8eed1 45%, #e2cf9c 100%);
+  --edge: 0 0 0 1px #6a4e2a, 0 1.5px 3px rgba(40, 20, 4, 0.4);
+  --i0: #2c2118; --i1: #a1301f; --i2: #a1301f; --i3: #2c2118;
+  --trim: #c08a2b; --skin: #f2d4ae; --hair: #4b3524; --cline: #2c2118;
+}
+[data-cards="vintage"] .index { font-family: 'Iowan Old Style', 'Palatino', 'Book Antiqua', var(--serif); }
+[data-cards="vintage"] .card.down {
+  background-image: url("../assets/backs/vintage.svg");
+  box-shadow: 0 0 0 1px #6a4e2a, 0 1.5px 3px rgba(40, 20, 4, 0.5);
+}
+
+/* ---------- Deco: cream, navy and burgundy, big clean symbols ---------- */
+[data-cards="deco"] {
+  --face: linear-gradient(180deg, #fbf4e4 0%, #f1e6cb 100%);
+  --edge: 0 0 0 1px #b88f33, 0 1.5px 3px rgba(10, 18, 40, 0.4);
+  --i0: #14284b; --i1: #9b1b3a; --i2: #9b1b3a; --i3: #14284b;
+}
+[data-cards="deco"] .index, [data-cards="deco"] .face-letter { font-family: 'Didot', 'Bodoni 72', 'Bodoni MT', var(--serif); }
+[data-cards="deco"] .card.down {
+  background-image: url("../assets/backs/deco.svg");
+  box-shadow: 0 0 0 1px #d9b25a, 0 1.5px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Pastel: every suit has its own tinted card ---------- */
+[data-cards="pastel"] {
+  --edge: 0 0 0 0.6px rgba(40, 30, 90, 0.28), 0 1.5px 3px rgba(10, 6, 40, 0.35);
+  --i0: #342d96; --i1: #d01a48; --i2: #cf6410; --i3: #12794f;
+  --face: #fff;
+}
+[data-cards="pastel"] .index, [data-cards="pastel"] .face-letter { font-family: var(--sans); font-weight: 800; }
+[data-cards="pastel"] .index b { letter-spacing: -0.04em; }
+[data-cards="pastel"] .card.up.suit-0 { background: linear-gradient(180deg, #ece8ff, #dcd5ff); }
+[data-cards="pastel"] .card.up.suit-1 { background: linear-gradient(180deg, #ffe8ee, #ffd3de); }
+[data-cards="pastel"] .card.up.suit-2 { background: linear-gradient(180deg, #fff1d8, #ffe2b4); }
+[data-cards="pastel"] .card.up.suit-3 { background: linear-gradient(180deg, #def7ea, #c6efd9); }
+[data-cards="pastel"] .card.down {
+  background-image: url("../assets/backs/pastel.svg");
+  box-shadow: 0 1.5px 3px rgba(10, 6, 40, 0.4);
+}
+
+/* ---------- Neon: dark glass and glowing suits ---------- */
+[data-cards="neon"] {
+  --face: linear-gradient(180deg, #14153a 0%, #0a0b22 100%);
+  --edge: 0 0 0 1px #2c3070, 0 1.5px 4px rgba(0, 0, 0, 0.6);
+  --i0: #35e0ff; --i1: #ff3fa4; --i2: #ffd23f; --i3: #5dff7a;
+}
+[data-cards="neon"] .index, [data-cards="neon"] .face-letter { font-family: var(--sans); font-weight: 800; text-shadow: 0 0 5px currentColor; }
+[data-cards="neon"] .card.up .su, [data-cards="neon"] .card.up .bigsu { filter: drop-shadow(0 0 2.5px currentColor); }
+[data-cards="neon"] .card.down {
+  background-image: url("../assets/backs/neon.svg");
+  box-shadow: 0 0 0 1px #1c2068, 0 1.5px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- finishes: how any look is lit ---------- */
+/* Moody: deep, shadowed cards — a vignette darkens the corners and the foot of
+   every card, and each one throws a heavy shadow on the cloth. */
+[data-cards][data-finish="moody"] {
+  --edge: 0 0 0 0.5px rgba(0, 0, 0, 0.7), 0 3px 7px rgba(0, 0, 0, 0.7);
+  --lift: 0 0 0 0.5px rgba(0, 0, 0, 0.7), 0 16px 30px rgba(0, 0, 0, 0.8);
+}
+[data-cards][data-finish="moody"] .card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 100% at 32% 22%, rgba(0, 0, 0, 0) 22%, rgba(18, 8, 40, 0.58) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 46%, rgba(12, 6, 30, 0.4) 100%),
+    rgba(34, 22, 56, 0.1);
+}
+
+/* Stark: pure white faces, black and red ink, a hard black edge and no shading. */
+[data-cards][data-finish="stark"] {
+  --face: #fff;
+  --edge: 0 0 0 1px #000;
+  --lift: 0 0 0 1px #000, 0 10px 18px rgba(0, 0, 0, 0.45);
+  --i0: #000; --i1: #d10000; --i2: #d10000; --i3: #000;
+  --trim: #f0b400; --skin: #fff; --hair: #000; --cline: #000; --pane: transparent;
+}
+[data-cards="jewel"][data-finish="stark"],
+[data-cards="pastel"][data-finish="stark"],
+[data-cards="neon"][data-finish="stark"] { --i2: #0033cc; --i3: #006b2e; }
+[data-cards][data-finish="stark"] .card.up { background: #fff; }
+[data-cards][data-finish="stark"] .card.up.suit-0 { color: var(--i0); }
+[data-cards][data-finish="stark"] .card.up.suit-1 { color: var(--i1); }
+[data-cards][data-finish="stark"] .card.up.suit-2 { color: var(--i2); }
+[data-cards][data-finish="stark"] .card.up.suit-3 { color: var(--i3); }
+[data-cards][data-finish="stark"] .card.up .index,
+[data-cards][data-finish="stark"] .card.up .face-letter { text-shadow: none; font-weight: 800; }
+[data-cards][data-finish="stark"] .card.up .su,
+[data-cards][data-finish="stark"] .card.up .bigsu { filter: none; }
+
+/* ---------- state glow wins over every look and finish ---------- */
+[data-cards] .card.up.hint-src { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(233, 196, 106, 0.8); }
+[data-cards] .card.up.dragging { box-shadow: var(--lift, 0 0 0 0.5px rgba(80, 60, 20, 0.35), 0 12px 24px rgba(5, 2, 20, 0.55)); }
+[data-cards] .card.down.hint-src { box-shadow: 0 0 0 2px var(--gold), 0 0 22px rgba(233, 196, 106, 0.9); }
+[data-cards] .card.down.stock-top.can-deal { box-shadow: 0 0 0 0.5px rgba(233, 196, 106, 0.8), 0 0 16px rgba(233, 196, 106, 0.35), 0 1.5px 3px rgba(0, 0, 0, 0.45); }
+[data-cards] .card.down.stock-top.hint-src { box-shadow: 0 0 0 2px var(--gold), 0 0 22px rgba(233, 196, 106, 0.9); }
+
+/* ---------- the picker ---------- */
+.look-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-align: left;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  color: var(--ink);
+}
+.look-btn > svg { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--gold-soft); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.look-btn .chev { width: 18px; height: 18px; margin-left: auto; opacity: 0.7; }
+.look-text { display: flex; flex-direction: column; gap: 2px; }
+.look-text strong { font-size: 15.5px; }
+.look-text small { font-size: 12.5px; color: var(--ink-dim); }
+
+.card-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.look-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  border-radius: 18px;
+  text-align: left;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  color: var(--ink-dim);
+}
+.look-pick[aria-pressed="true"] { color: var(--ink); background: rgba(255, 255, 255, 0.11); box-shadow: 0 0 0 2px var(--gold); }
+.look-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 650; letter-spacing: 0.02em; }
+.look-pick[aria-pressed="true"] .look-name::after {
+  content: '\2713';
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #2a1f08;
+  background: var(--gold);
+}
+/* Preview cards are the board's real cards, a little bigger. */
+.look-cards { --cw: 50px; --ch: 72.5px; display: flex; gap: 8px; }
+.look-cards .card {
+  position: relative;
+  flex: none;
+  width: var(--cw);
+  height: var(--ch);
+  overflow: hidden;
+  transform: none;
+  will-change: auto;
+  contain: none;
+  transition: none;
+}
+
+.finish-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.finish-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 4px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass);
+  color: var(--ink-dim);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.finish-pick[aria-pressed="true"] { color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
+.finish-pick .look-cards { --cw: 34px; --ch: 49px; gap: 5px; }
+
+/* ---------- Classic: the FreeCell/Golf/Bridge PNG deck, same API ---------- */
+[data-cards="classic"], [data-layout="classic"] { --face: #fff; --edge: 0 0 0 1px #1a1a1a, 0 1px 2px rgba(0,0,0,.28); }
+[data-cards="classic"] .card.down, [data-layout="classic"] .card.down {
+  background: url("../assets/backs/classic.svg") center / 100% 100% no-repeat;
+  box-shadow: 0 0 0 1px #f6f0e4, 0 1px 2px rgba(0,0,0,.35);
+}
+[data-layout="classic"] .corner, [data-layout="classic"] .pip, [data-layout="classic"] .face-letter,
+[data-layout="classic"] .index, [data-layout="classic"] .pips, [data-layout="classic"] .bigsu { display: none; }
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="1"] {
+  background: url("../assets/decks/classic/spades_A.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="2"] {
+  background: url("../assets/decks/classic/spades_2.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="3"] {
+  background: url("../assets/decks/classic/spades_3.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="4"] {
+  background: url("../assets/decks/classic/spades_4.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="5"] {
+  background: url("../assets/decks/classic/spades_5.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="6"] {
+  background: url("../assets/decks/classic/spades_6.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="7"] {
+  background: url("../assets/decks/classic/spades_7.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="8"] {
+  background: url("../assets/decks/classic/spades_8.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="9"] {
+  background: url("../assets/decks/classic/spades_9.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="10"] {
+  background: url("../assets/decks/classic/spades_10.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="11"] {
+  background: url("../assets/decks/classic/spades_J.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="12"] {
+  background: url("../assets/decks/classic/spades_Q.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="0"][data-rank="13"] {
+  background: url("../assets/decks/classic/spades_K.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="1"] {
+  background: url("../assets/decks/classic/hearts_A.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="2"] {
+  background: url("../assets/decks/classic/hearts_2.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="3"] {
+  background: url("../assets/decks/classic/hearts_3.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="4"] {
+  background: url("../assets/decks/classic/hearts_4.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="5"] {
+  background: url("../assets/decks/classic/hearts_5.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="6"] {
+  background: url("../assets/decks/classic/hearts_6.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="7"] {
+  background: url("../assets/decks/classic/hearts_7.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="8"] {
+  background: url("../assets/decks/classic/hearts_8.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="9"] {
+  background: url("../assets/decks/classic/hearts_9.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="10"] {
+  background: url("../assets/decks/classic/hearts_10.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="11"] {
+  background: url("../assets/decks/classic/hearts_J.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="12"] {
+  background: url("../assets/decks/classic/hearts_Q.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="1"][data-rank="13"] {
+  background: url("../assets/decks/classic/hearts_K.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="1"] {
+  background: url("../assets/decks/classic/diamonds_A.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="2"] {
+  background: url("../assets/decks/classic/diamonds_2.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="3"] {
+  background: url("../assets/decks/classic/diamonds_3.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="4"] {
+  background: url("../assets/decks/classic/diamonds_4.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="5"] {
+  background: url("../assets/decks/classic/diamonds_5.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="6"] {
+  background: url("../assets/decks/classic/diamonds_6.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="7"] {
+  background: url("../assets/decks/classic/diamonds_7.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="8"] {
+  background: url("../assets/decks/classic/diamonds_8.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="9"] {
+  background: url("../assets/decks/classic/diamonds_9.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="10"] {
+  background: url("../assets/decks/classic/diamonds_10.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="11"] {
+  background: url("../assets/decks/classic/diamonds_J.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="12"] {
+  background: url("../assets/decks/classic/diamonds_Q.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="2"][data-rank="13"] {
+  background: url("../assets/decks/classic/diamonds_K.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="1"] {
+  background: url("../assets/decks/classic/clubs_A.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="2"] {
+  background: url("../assets/decks/classic/clubs_2.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="3"] {
+  background: url("../assets/decks/classic/clubs_3.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="4"] {
+  background: url("../assets/decks/classic/clubs_4.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="5"] {
+  background: url("../assets/decks/classic/clubs_5.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="6"] {
+  background: url("../assets/decks/classic/clubs_6.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="7"] {
+  background: url("../assets/decks/classic/clubs_7.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="8"] {
+  background: url("../assets/decks/classic/clubs_8.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="9"] {
+  background: url("../assets/decks/classic/clubs_9.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="10"] {
+  background: url("../assets/decks/classic/clubs_10.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="11"] {
+  background: url("../assets/decks/classic/clubs_J.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="12"] {
+  background: url("../assets/decks/classic/clubs_Q.png") center / 100% 100% no-repeat;
+}
+[data-cards="classic"] .card.up[data-suit="3"][data-rank="13"] {
+  background: url("../assets/decks/classic/clubs_K.png") center / 100% 100% no-repeat;
+}

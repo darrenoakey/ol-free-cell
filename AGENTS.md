@@ -26,3 +26,11 @@ greenline never discards commits on `main`.
 
 Diagnose with `greenline status` and `greenline doctor` (`--fix` to reconcile).
 <!-- <<< greenline <<< -->
+
+## OL Core
+
+Shared chrome, history, and cards are vendored in `web/core` by `node ~/src/ol-core/scripts/sync-core.mjs web`. Do not edit `web/core` by hand. `./run check` runs `verify-core` and `tests/unit` before the web BDD suite, which also runs `web/core/contract/contract.feature`.
+
+Legacy daily data lives in Capacitor Preferences keys `olfreecell.completed.<date>`, `olfreecell.stats`, `olfreecell.progress.<date>`, and `olfreecell.settings`. `web/js/migrate.js` gathers those into canonical `ol-free-cell.history.v1`. Do not delete the legacy keys. Progress stays on the old progress key so an in-progress deal survives the upgrade.
+
+`themes.css` has a broken selector, `html[data-theme="emerald"], html[data-ol-theme="emerald"] body::before`, which sets `opacity: 0` on the document. `web/css/board.css` restores `opacity: 1`. Keep that override until core is fixed, or the table screenshots and the live app go blank.

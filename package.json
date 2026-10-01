@@ -6,7 +6,7 @@
   "main": "index.html",
   "scripts": {
     "build": "echo 'No build step required'",
-    "test:bdd:web": "cucumber-js --import tests/bdd/support/world.js --import tests/bdd/steps/sunlit_felt.steps.js tests/bdd/features/sunlit_felt.feature --tags 'not @native'"
+    "test:bdd:web": "cucumber-js --import tests/bdd/support/world.js --import tests/bdd/steps/sunlit_felt.steps.js --import tests/bdd/steps/contract.steps.js --import web/core/contract/steps.js tests/bdd/features web/core/contract/contract.feature --tags 'not @native'"
   },
   "dependencies": {
     "@capacitor/cli": "^8.0.0",

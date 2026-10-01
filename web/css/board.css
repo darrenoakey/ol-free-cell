@@ -1,0 +1,91 @@
+/* Board cards keep FreeCell's column geometry. OL card faces paint inside it.
+   Loaded after core/css/cards.css so the sunlit-felt assertions still hold.
+   themes.css writes `html[data-theme="emerald"], html[...] body::before { opacity: 0 }`,
+   which hides the document. Restore opacity here. */
+
+html[data-theme],
+html[data-ol-theme] {
+  opacity: 1;
+}
+
+body.theme-emerald,
+body.theme-midnight {
+  --ink: #173126;
+}
+
+html[data-theme="emerald"] body.theme-emerald,
+html[data-ol-theme="emerald"] body.theme-emerald,
+html[data-theme="midnight"] body.theme-midnight,
+html[data-ol-theme="midnight"] body.theme-midnight {
+  background-color: var(--felt-1);
+  background-image:
+    radial-gradient(ellipse 115% 75% at 50% -12%, rgba(255, 255, 255, 0.12), transparent 62%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(155deg, var(--felt-highlight), var(--felt-base) 52%, var(--felt-edge));
+  background-blend-mode: soft-light, overlay, normal;
+  background-size: auto, 96px 96px, auto;
+}
+
+body.theme-ol {
+  --text: var(--ink);
+  --text-dim: var(--ink-dim);
+  --felt-1: var(--bg-0);
+  --felt-2: var(--bg-1);
+  --felt-3: var(--bg-0);
+  --accent: var(--ink-dim);
+  --panel: var(--glass);
+  --panel-border: var(--glass-edge);
+  color: var(--ink);
+}
+
+.stat-hit {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+.stat-hit > .icon-btn {
+  position: absolute;
+  inset: 0;
+}
+.stats-alias {
+  opacity: 0;
+  z-index: 2;
+}
+
+#board .card {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 512 / 768;
+  border-radius: var(--radius-card, 8px);
+  background-color: #f7f3e8;
+  box-shadow: var(--card-shadow);
+  outline: 1px solid rgba(20, 20, 20, 0.1);
+  outline-offset: -1px;
+}
+#board .card.playable {
+  box-shadow: var(--card-shadow-playable);
+}
+#board .card.buried {
+  box-shadow:
+    0 1px 1px rgba(3, 32, 20, 0.14),
+    0 4px 9px rgba(3, 32, 20, 0.16);
+}
+#board .card.selected {
+  box-shadow:
+    0 0 0 2px var(--gold-bright, #ffe6a0),
+    0 0 14px 3px rgba(244, 211, 123, 0.5),
+    var(--card-shadow-playable);
+}
+#board .slot .card {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

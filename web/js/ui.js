@@ -84,11 +84,6 @@ const UI = {
     document.getElementById('win-close').addEventListener('click', () => c.onWinClosed());
     document.getElementById('stuck-retry').addEventListener('click', () => c.onStuckRetry());
     document.getElementById('stuck-close').addEventListener('click', () => this.hideModal('overlay-stuck'));
-    document.getElementById('stats-close').addEventListener('click', () => this.hideModal('overlay-stats'));
-
-    document.getElementById('cal-prev').addEventListener('click', () => c.onCalendarShift(-1));
-    document.getElementById('cal-next').addEventListener('click', () => c.onCalendarShift(1));
-    document.getElementById('cal-close').addEventListener('click', () => this.hideModal('overlay-calendar'));
   },
 
   // ---- drag / drop -------------------------------------------------------
@@ -127,7 +122,7 @@ const UI = {
 
     const firstRect = grabCards[0].getBoundingClientRect();
     const ghost = this._buildDragGhost(grabCards, firstRect);
-    document.body.appendChild(ghost);
+    this.els.board.appendChild(ghost);
 
     // Hide source cards while the ghost rides the pointer.
     grabCards.forEach((el) => el.classList.add('drag-source-hidden'));
@@ -394,16 +389,12 @@ const UI = {
   },
 
   cardFrontEl(card) {
-    const wrap = document.createElement('div');
-    wrap.className = 'card face-up';
-    wrap.dataset.cardId = card.id;
-    const img = document.createElement('img');
-    img.src = `assets/cards/${Cards.cardImageFile(card)}`;
-    img.alt = `${Cards.cardLabel(card)} of ${card.suit}`;
-    img.draggable = false;
-    img.className = 'card-face';
-    wrap.appendChild(img);
-    return wrap;
+    const suit = { spades: 0, hearts: 1, diamonds: 2, clubs: 3 }[card.suit];
+    const el = OL.Cards.cardElement({ suit, rank: card.rank, id: card.id });
+    el.classList.remove('down');
+    el.classList.add('up', 'face-up');
+    el.dataset.cardId = card.id;
+    return el;
   },
 
   // ---- full board render -------------------------------------------------
@@ -423,6 +414,7 @@ const UI = {
   renderCascades(game) {
     const sampleWidth = this.els.columns[0].getBoundingClientRect().width || 42;
     const cardHeight = sampleWidth * (768 / 512);
+    OL.Cards.setGeometry(this.els.board, sampleWidth, cardHeight);
     const fanGap = Math.max(14, cardHeight * 0.22);
     const maxCards = Math.max(7, ...game.cascades.map((c) => c.length));
     const columnHeight = fanGap * Math.max(0, maxCards - 1) + cardHeight + 4;
@@ -536,7 +528,7 @@ const UI = {
     const img = this.cardFrontEl(card);
     img.classList.add('flying-card');
     this._positionFixed(img, fromRect);
-    document.body.appendChild(img);
+    this.els.board.appendChild(img);
     requestAnimationFrame(() => {
       img.style.transition = 'transform .28s cubic-bezier(.22,.85,.35,1)';
       const dx = destRect.left + destRect.width / 2 - (fromRect.left + fromRect.width / 2);
@@ -575,7 +567,7 @@ const UI = {
         clone.classList.add('flying-card');
         this._positionFixed(clone, origin);
         clone.style.opacity = '0.001';
-        document.body.appendChild(clone);
+        this.els.board.appendChild(clone);
         const d = delay;
         setTimeout(() => {
           clone.style.opacity = '1';
@@ -633,7 +625,7 @@ const UI = {
     document.getElementById('win-streak-value').textContent = streak;
     document.querySelector('.win-streak').style.display = isToday ? '' : 'none';
     this.showModal('overlay-win');
-    Confetti.burst();
+    OL.Confetti.burst();
   },
 
   showStuck(record) {
@@ -641,15 +633,6 @@ const UI = {
     document.getElementById('stuck-summary').textContent =
       `${left} card${left === 1 ? '' : 's'} still out. Undo a few moves or restart the deal.`;
     this.showModal('overlay-stuck');
-  },
-
-  renderStats(stats) {
-    document.getElementById('s-played').textContent = stats.played;
-    const pct = stats.played ? Math.round((stats.won / stats.played) * 100) : 0;
-    document.getElementById('s-winpct').textContent = `${pct}%`;
-    document.getElementById('s-streak').textContent = stats.currentStreak;
-    document.getElementById('s-best').textContent = stats.bestStreak;
-    this.showModal('overlay-stats');
   },
 
   formatTime(ms) {
@@ -660,48 +643,9 @@ const UI = {
   },
 
   setThemeLabel(theme) {
-    document.getElementById('theme-label').textContent = theme === 'emerald' ? 'Emerald' : 'Midnight';
-  },
-
-  renderCalendar(year, month, completions, todayStr) {
-    document.getElementById('cal-title').textContent = new Date(year, month, 1).toLocaleString(undefined, {
-      month: 'long',
-      year: 'numeric',
-    });
-    const grid = document.getElementById('cal-grid');
-    grid.innerHTML = '';
-    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((d) => {
-      const h = document.createElement('div');
-      h.className = 'cal-dow';
-      h.textContent = d;
-      grid.appendChild(h);
-    });
-    const first = new Date(year, month, 1);
-    const startWeekday = first.getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let i = 0; i < startWeekday; i++) {
-      grid.appendChild(document.createElement('div'));
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const cell = document.createElement('button');
-      cell.className = 'cal-cell';
-      cell.innerHTML = `<span class="cal-day">${day}</span>`;
-      const isFuture = dateStr > todayStr;
-      if (isFuture) {
-        cell.classList.add('future');
-        cell.disabled = true;
-      } else {
-        const comp = completions[dateStr];
-        if (comp) {
-          cell.classList.add(comp.status === 'won' ? 'won' : 'stuck');
-          cell.innerHTML += `<span class="cal-badge">${comp.status === 'won' ? '\u2713' : '\u2715'}</span>`;
-        }
-        if (dateStr === todayStr) cell.classList.add('today');
-        cell.addEventListener('click', () => this.controller.onArchiveDateChosen(dateStr));
-      }
-      grid.appendChild(cell);
-    }
+    const known = OL.Themes.BY_ID[theme];
+    const label = theme === 'emerald' ? 'Emerald' : theme === 'midnight' ? 'Midnight' : (known ? known.name : theme);
+    document.getElementById('theme-label').textContent = label;
   },
 };
 

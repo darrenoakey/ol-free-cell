@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 58" preserveAspectRatio="none">
+<rect width="40" height="58" fill="#0b5a50"/>
+<clipPath id="c"><rect x="4" y="4" width="32" height="50" rx="1.2"/></clipPath>
+<g clip-path="url(#c)"><rect x="4" y="4" width="32" height="50" fill="#07463f"/><path d="M-60 -2L2 60M2 -2L-60 60M-52 -2L10 60M10 -2L-52 60M-44 -2L18 60M18 -2L-44 60M-36 -2L26 60M26 -2L-36 60M-28 -2L34 60M34 -2L-28 60M-20 -2L42 60M42 -2L-20 60M-12 -2L50 60M50 -2L-12 60M-4 -2L58 60M58 -2L-4 60M4 -2L66 60M66 -2L4 60M12 -2L74 60M74 -2L12 60M20 -2L82 60M82 -2L20 60M28 -2L90 60M90 -2L28 60M36 -2L98 60M98 -2L36 60M44 -2L106 60M106 -2L44 60M52 -2L114 60M114 -2L52 60M60 -2L122 60M122 -2L60 60M68 -2L130 60M130 -2L68 60M76 -2L138 60M138 -2L76 60M84 -2L146 60M146 -2L84 60M92 -2L154 60M154 -2L92 60" stroke="#e8c15a" stroke-opacity=".45" stroke-width=".5" fill="none"/></g>
+<rect x="1.4" y="1.4" width="37.2" height="55.2" rx="2.4" fill="none" stroke="#e8c15a" stroke-width=".9"/>
+<rect x="3.4" y="3.4" width="33.2" height="51.2" rx="1.6" fill="none" stroke="#e8c15a" stroke-width=".4"/>
+<path d="M20 12 31 29 20 46 9 29Z" fill="#0b5a50" stroke="#e8c15a" stroke-width=".8"/>
+<path d="M20 18.4 26.4 29 20 39.6 13.6 29Z" fill="none" stroke="#e8c15a" stroke-width=".5"/>
+<circle cx="20" cy="12" r="2.3" fill="#3b8bff" stroke="#fff3c9" stroke-width=".5"/><circle cx="31" cy="29" r="2.3" fill="#ff4a64" stroke="#fff3c9" stroke-width=".5"/><circle cx="20" cy="46" r="2.3" fill="#ffd04a" stroke="#fff3c9" stroke-width=".5"/><circle cx="9" cy="29" r="2.3" fill="#41d68c" stroke="#fff3c9" stroke-width=".5"/>
+</svg>

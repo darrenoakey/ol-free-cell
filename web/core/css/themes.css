@@ -1,0 +1,244 @@
+/* OL themes — token sets keyed by data-ol-theme and data-theme.
+   Twilight is the :root default in chrome.css / the host app. */
+html[data-theme="twilight"], html[data-ol-theme="twilight"] {
+  --bg-0: #0d0a22;
+  --bg-1: #171236;
+  --bg-2: #241a52;
+  --ink: #f5efe2;
+  --ink-dim: #b9b0d6;
+  --ink-faint: #7d74a3;
+  --gold: #e9c46a;
+  --gold-soft: #f3dca0;
+  --gold-deep: #b98f35;
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-edge: rgba(255, 255, 255, 0.10);
+}
+
+/* ---------- table themes ---------- */
+/* Table colour and card look are independent: the card looks live in cards.css. */
+html[data-theme="classic"], html[data-ol-theme="classic"] {
+  --bg-0: #0a3d24;
+  --bg-1: #146b40;
+  --ink: #f6f1e4;
+  --ink-dim: #d7e7d6;
+  --ink-faint: #a3c4ab;
+  --gold: #e6c56a;
+  --gold-soft: #f3dd9a;
+  --gold-deep: #b8923a;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.16);
+}
+html[data-theme="classic"], html[data-ol-theme="classic"] body {
+  background:
+    radial-gradient(80% 40% at 50% -10%, rgba(255, 255, 255, 0.10), transparent 55%),
+    radial-gradient(70% 40% at 100% 100%, rgba(0, 0, 0, 0.28), transparent 70%),
+    linear-gradient(180deg, #1a7a48 0%, #0e5a34 48%, #0a3d24 100%);
+}
+html[data-theme="classic"], html[data-ol-theme="classic"] body::before { opacity: 0; }
+html[data-theme="classic"], html[data-ol-theme="classic"] .sheet-panel {
+  background: linear-gradient(180deg, #1c6b42 0%, #0e4a2c 42%, #0a3d24 100%);
+  border-top-color: rgba(230, 197, 106, 0.35);
+}
+
+html[data-theme="casino"], html[data-ol-theme="casino"] {
+  --bg-0: #061018;
+  --bg-1: #0c2236;
+  --ink: #f4f7fb;
+  --ink-dim: #c5d4e4;
+  --ink-faint: #8aa4bc;
+  --gold: #d7c48a;
+  --gold-soft: #efe3bf;
+  --gold-deep: #a8925c;
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+}
+html[data-theme="casino"], html[data-ol-theme="casino"] body {
+  background:
+    radial-gradient(80% 40% at 50% -10%, rgba(180, 210, 255, 0.10), transparent 55%),
+    linear-gradient(180deg, #16344e 0%, #0c2236 46%, #061018 100%);
+}
+html[data-theme="casino"], html[data-ol-theme="casino"] body::before { opacity: 0; }
+html[data-theme="casino"], html[data-ol-theme="casino"] .sheet-panel {
+  background: linear-gradient(180deg, #1a3d58 0%, #0e2740 42%, #071525 100%);
+  border-top-color: rgba(215, 196, 138, 0.35);
+}
+
+html[data-theme="parlor"], html[data-ol-theme="parlor"] {
+  --bg-0: #2a0c16;
+  --bg-1: #4a1526;
+  --ink: #f8f1ea;
+  --ink-dim: #e4cfc6;
+  --ink-faint: #c4a094;
+  --gold: #e6c56a;
+  --gold-soft: #f6e2ae;
+  --gold-deep: #b8923a;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+}
+html[data-theme="parlor"], html[data-ol-theme="parlor"] body {
+  background:
+    radial-gradient(80% 40% at 50% -8%, rgba(255, 220, 180, 0.12), transparent 55%),
+    linear-gradient(180deg, #6a2438 0%, #4a1526 46%, #2a0c16 100%);
+}
+html[data-theme="parlor"], html[data-ol-theme="parlor"] body::before { opacity: 0; }
+html[data-theme="parlor"], html[data-ol-theme="parlor"] .sheet-panel {
+  background: linear-gradient(180deg, #6a2438 0%, #4a1526 42%, #2a0c16 100%);
+  border-top-color: rgba(230, 197, 106, 0.35);
+}
+
+.theme-kicker {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.theme-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.theme-pick {
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass);
+  padding: 7px 4px 6px;
+  color: var(--ink-dim);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.theme-pick[aria-pressed="true"] { color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
+.swatch {
+  display: block;
+  height: 34px;
+  margin: 0 6px 6px;
+  border-radius: 8px;
+  position: relative;
+}
+.swatch::after {
+  content: '';
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  width: 12px;
+  height: 17px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: -7px 3px 0 0 var(--chip-back, #8e1b2c);
+}
+.swatch.twilight { background: linear-gradient(180deg, #241a52, #0d0a22); --chip-back: #3a2d86; }
+.swatch.twilight::after { background: #3a2d86; box-shadow: -7px 3px 0 0 #e9c46a; }
+.swatch.classic { background: linear-gradient(180deg, #1a7a48, #0a3d24); --chip-back: #8e1b2c; }
+.swatch.casino { background: linear-gradient(180deg, #16344e, #061018); --chip-back: #0e2744; }
+.swatch.parlor { background: linear-gradient(180deg, #6a2438, #2a0c16); --chip-back: #1d4e89; }
+
+html[data-theme="emerald"], html[data-ol-theme="emerald"] {
+  --bg-0: #063a27; --bg-1: #0b563a; --ink: #f7f3e8; --ink-dim: #d5e8dc; --ink-faint: #9ec4ae;
+  --gold: #f4d37b; --gold-soft: #ffe6a0; --gold-deep: #b8923a;
+  --glass: rgba(255,255,255,0.08); --glass-edge: rgba(255,255,255,0.16);
+}
+html[data-theme="emerald"], html[data-ol-theme="emerald"] body {
+  background: linear-gradient(180deg, #177a51 0%, #0b563a 48%, #063a27 100%);
+}
+html[data-theme="emerald"], html[data-ol-theme="emerald"] body::before { opacity: 0; }
+html[data-theme="emerald"], html[data-ol-theme="emerald"] .sheet-panel {
+  background: linear-gradient(180deg, #126b48 0%, #0b563a 42%, #063a27 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="midnight"], html[data-ol-theme="midnight"] {
+  --bg-0: #12323d; --bg-1: #1b4652; --ink: #f7f3e8; --ink-dim: #d5e8dc; --ink-faint: #9bb8bc;
+  --gold: #f4d37b; --gold-soft: #ffe6a0; --gold-deep: #b8923a;
+  --glass: rgba(255,255,255,0.07); --glass-edge: rgba(255,255,255,0.14);
+}
+html[data-theme="midnight"], html[data-ol-theme="midnight"] body {
+  background: linear-gradient(180deg, #2d6469 0%, #1b4652 48%, #12323d 100%);
+}
+html[data-theme="midnight"], html[data-ol-theme="midnight"] body::before { opacity: 0; }
+html[data-theme="midnight"], html[data-ol-theme="midnight"] .sheet-panel {
+  background: linear-gradient(180deg, #245860 0%, #1b4652 42%, #12323d 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="front-nine"], html[data-ol-theme="front-nine"] {
+  --bg-0: #d7efe2; --bg-1: #e7f6ee; --ink: #10281c; --ink-dim: #2c5a40; --ink-faint: #4e7a62;
+  --gold: #1f7a45; --gold-soft: #16382a; --gold-deep: #0e4a2c;
+  --glass: rgba(16,40,28,0.06); --glass-edge: rgba(16,40,28,0.14);
+}
+html[data-theme="front-nine"], html[data-ol-theme="front-nine"] body {
+  background: linear-gradient(180deg, #9fd3ec 0%, #e6f4ea 42%, #58af74 100%);
+}
+html[data-theme="front-nine"], html[data-ol-theme="front-nine"] body::before { opacity: 0; }
+html[data-theme="front-nine"], html[data-ol-theme="front-nine"] .sheet-panel {
+  background: linear-gradient(180deg, #f4f8f2 0%, #e7f6ee 50%, #cfe8d8 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="back-nine"], html[data-ol-theme="back-nine"] {
+  --bg-0: #123425; --bg-1: #1e4d36; --ink: #f4efe0; --ink-dim: #c6c0aa; --ink-faint: #8fa892;
+  --gold: #f2b25c; --gold-soft: #ffd9a0; --gold-deep: #b07a30;
+  --glass: rgba(255,255,255,0.07); --glass-edge: rgba(238,232,214,0.2);
+}
+html[data-theme="back-nine"], html[data-ol-theme="back-nine"] body {
+  background: linear-gradient(180deg, #2f3a63 0%, #1e4d36 46%, #123425 100%);
+}
+html[data-theme="back-nine"], html[data-ol-theme="back-nine"] body::before { opacity: 0; }
+html[data-theme="back-nine"], html[data-ol-theme="back-nine"] .sheet-panel {
+  background: linear-gradient(180deg, #2c3a58 0%, #1e4d36 42%, #123425 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="parchment"], html[data-ol-theme="parchment"] {
+  --bg-0: #e9d9af; --bg-1: #f3e6c4; --ink: #432205; --ink-dim: #6a4018; --ink-faint: #8a6240;
+  --gold: #8b3c10; --gold-soft: #432205; --gold-deep: #6a3010;
+  --glass: rgba(67,34,5,0.06); --glass-edge: rgba(67,34,5,0.16);
+}
+html[data-theme="parchment"], html[data-ol-theme="parchment"] body {
+  background: url("../assets/themes/parchment.svg") center / 80px 80px repeat, linear-gradient(180deg, #f3e6c4, #e9d9af);
+}
+html[data-theme="parchment"], html[data-ol-theme="parchment"] body::before { opacity: 0; }
+html[data-theme="parchment"], html[data-ol-theme="parchment"] .sheet-panel {
+  background: linear-gradient(180deg, #f6edd4 0%, #e9d9af 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="bridge"], html[data-ol-theme="bridge"] {
+  --bg-0: #0e6b3a; --bg-1: #14924f; --ink: #f6f1e4; --ink-dim: #d7e7d6; --ink-faint: #a3c4ab;
+  --gold: #d4af37; --gold-soft: #f0d78c; --gold-deep: #a48420;
+  --glass: rgba(255,255,255,0.08); --glass-edge: rgba(255,255,255,0.16);
+}
+html[data-theme="bridge"], html[data-ol-theme="bridge"] body {
+  background: linear-gradient(180deg, #14924f 0%, #0e6b3a 55%, #0a4e2a 100%);
+}
+html[data-theme="bridge"], html[data-ol-theme="bridge"] body::before { opacity: 0; }
+html[data-theme="bridge"], html[data-ol-theme="bridge"] .sheet-panel {
+  background: linear-gradient(180deg, #14924f 0%, #0e6b3a 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="four-navy"], html[data-ol-theme="four-navy"] {
+  --bg-0: #060c1a; --bg-1: #0e1f3d; --ink: #ffffff; --ink-dim: rgba(255,255,255,0.75); --ink-faint: rgba(255,255,255,0.5);
+  --gold: #d4a017; --gold-soft: #ffd56a; --gold-deep: #a07810;
+  --glass: rgba(255,255,255,0.06); --glass-edge: rgba(33,150,243,0.35);
+}
+html[data-theme="four-navy"], html[data-ol-theme="four-navy"] body {
+  background: radial-gradient(ellipse at 50% 40%, rgba(25,90,180,0.35), transparent 55%), linear-gradient(180deg, #0e1f3d, #060c1a);
+}
+html[data-theme="four-navy"], html[data-ol-theme="four-navy"] body::before { opacity: 0; }
+html[data-theme="four-navy"], html[data-ol-theme="four-navy"] .sheet-panel {
+  background: linear-gradient(180deg, #12305c 0%, #0e1f3d 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+html[data-theme="four-charcoal"], html[data-ol-theme="four-charcoal"] {
+  --bg-0: #1a1a1a; --bg-1: #2a2a2a; --ink: #f4f4f4; --ink-dim: #c8c8c8; --ink-faint: #8e8e8e;
+  --gold: #d4a017; --gold-soft: #ffd56a; --gold-deep: #a07810;
+  --glass: rgba(255,255,255,0.06); --glass-edge: rgba(255,255,255,0.14);
+}
+html[data-theme="four-charcoal"], html[data-ol-theme="four-charcoal"] body {
+  background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 100%);
+}
+html[data-theme="four-charcoal"], html[data-ol-theme="four-charcoal"] body::before { opacity: 0; }
+html[data-theme="four-charcoal"], html[data-ol-theme="four-charcoal"] .sheet-panel {
+  background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+  border-top-color: rgba(233, 196, 106, 0.35);
+}
+
+.swatch.emerald { background: linear-gradient(180deg, #177a51, #063a27); }
+.swatch.midnight { background: linear-gradient(180deg, #2d6469, #12323d); }
+.swatch.front-nine { background: linear-gradient(180deg, #9fd3ec, #58af74); }
+.swatch.back-nine { background: linear-gradient(180deg, #2f3a63, #123425); }
+.swatch.parchment { background: linear-gradient(180deg, #f3e6c4, #c4a574); }
+.swatch.bridge { background: linear-gradient(180deg, #14924f, #0a4e2a); }
+.swatch.four-navy { background: linear-gradient(180deg, #1E90FF, #060c1a); }
+.swatch.four-charcoal { background: linear-gradient(180deg, #555, #1a1a1a); }

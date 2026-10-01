@@ -11,7 +11,7 @@ usage() {
 Usage: ./run <command> [args]
 
 Commands:
-  check          Run the complete greenline quality gate (340-second deadline)
+  check          Run the complete greenline quality gate (540-second deadline)
   deploy         Prove the current SHA with the App Store preflight workflow
   health         Verify a successful App Store preflight for the current SHA
   device [name]  Sync, build, install, and launch on a device (default: Starbuck)
@@ -188,19 +188,31 @@ PY
 
 check_steps() {
     cd "$SCRIPT_DIR"
+    node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web"
+    node --test tests/unit/
     npm ci
     npm audit
     npm run test:bdd:web
     npx --no-install cap sync ios
 
-    # Pre-boot the gate simulator so XCTest AX comes up warm.
-    SIM_NAME="iPhone 18 Pro"
+    # The gate's own simulator, created on demand. iOS 18.0 renders this
+    # WebView; the iOS 27 simulator can show a blank page. Name is ol-free-cell-gate.
+    SIM_NAME="ol-free-cell-gate"
+    SIM_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+    SIM_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-0"
     SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
     if [[ -z "${SIM_UDID:-}" ]]; then
-        echo "ERROR: no available $SIM_NAME simulator is installed" >&2
+        xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
+            echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
+            exit 1
+        }
+        xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
+        SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
+    fi
+    if [[ -z "${SIM_UDID:-}" ]]; then
+        echo "ERROR: could not create the $SIM_NAME simulator" >&2
         exit 1
     fi
-    xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
     xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
     xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
 
@@ -213,10 +225,11 @@ check_steps() {
         -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
         -scheme App \
         -configuration Release \
-        -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=latest' \
+        -destination "platform=iOS Simulator,id=$SIM_UDID" \
         -derivedDataPath "$CHECK_DERIVED_DATA" \
         CODE_SIGNING_ALLOWED=NO \
         EXCLUDED_ARCHS=x86_64 \
+        -parallel-testing-enabled NO \
         -only-testing:AppUITests \
         test
 }
@@ -230,9 +243,9 @@ import sys
 
 process = subprocess.Popen([sys.argv[1], "__check_steps"], start_new_session=True)
 try:
-    result = process.wait(timeout=340)
+    result = process.wait(timeout=540)
 except subprocess.TimeoutExpired:
-    print("ERROR: check exceeded its 340-second deadline", file=sys.stderr)
+    print("ERROR: check exceeded its 540-second deadline", file=sys.stderr)
     os.killpg(process.pid, signal.SIGTERM)
     try:
         process.wait(timeout=5)

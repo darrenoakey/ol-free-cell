@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 58" preserveAspectRatio="none">
+<rect width="40" height="58" fill="#0a0a0f"/>
+<clipPath id="c"><rect x="4" y="4" width="32" height="50" rx="1.2"/></clipPath>
+<g clip-path="url(#c)"><rect x="4" y="4" width="32" height="50" fill="#14141c"/><path d="M-60 -2L2 60M2 -2L-60 60M-55 -2L7 60M7 -2L-55 60M-50 -2L12 60M12 -2L-50 60M-45 -2L17 60M17 -2L-45 60M-40 -2L22 60M22 -2L-40 60M-35 -2L27 60M27 -2L-35 60M-30 -2L32 60M32 -2L-30 60M-25 -2L37 60M37 -2L-25 60M-20 -2L42 60M42 -2L-20 60M-15 -2L47 60M47 -2L-15 60M-10 -2L52 60M52 -2L-10 60M-5 -2L57 60M57 -2L-5 60M0 -2L62 60M62 -2L0 60M5 -2L67 60M67 -2L5 60M10 -2L72 60M72 -2L10 60M15 -2L77 60M77 -2L15 60M20 -2L82 60M82 -2L20 60M25 -2L87 60M87 -2L25 60M30 -2L92 60M92 -2L30 60M35 -2L97 60M97 -2L35 60M40 -2L102 60M102 -2L40 60M45 -2L107 60M107 -2L45 60M50 -2L112 60M112 -2L50 60M55 -2L117 60M117 -2L55 60M60 -2L122 60M122 -2L60 60M65 -2L127 60M127 -2L65 60M70 -2L132 60M132 -2L70 60M75 -2L137 60M137 -2L75 60M80 -2L142 60M142 -2L80 60M85 -2L147 60M147 -2L85 60M90 -2L152 60M152 -2L90 60M95 -2L157 60M157 -2L95 60" stroke="#d6b25e" stroke-opacity=".5" stroke-width=".45" fill="none"/></g>
+<rect x="1.4" y="1.4" width="37.2" height="55.2" rx="2.4" fill="none" stroke="#d6b25e" stroke-width=".9"/>
+<rect x="3.4" y="3.4" width="33.2" height="51.2" rx="1.6" fill="none" stroke="#d6b25e" stroke-width=".4"/>
+<path d="M20 15 29.5 29 20 43 10.5 29Z" fill="#0a0a0f" stroke="#d6b25e" stroke-width=".9"/>
+<path d="M20 20.5 25.6 29 20 37.5 14.4 29Z" fill="#d6b25e"/>
+<path d="M20 25 22.4 29 20 33 17.6 29Z" fill="#0a0a0f"/>
+</svg>
