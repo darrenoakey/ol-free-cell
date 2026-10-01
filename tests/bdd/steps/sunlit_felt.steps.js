@@ -56,6 +56,14 @@ Then('the emerald theme uses the sunlit felt palette', async function () {
 Then('the table uses cream cards with soft shadows', async function () {
   const card = this.page.locator('#tableau .card').first();
   await card.waitFor();
+  // Classic is the default and shows only its PNG art; cream is the drawn looks' plate.
+  await this.page.getByRole('button', { name: 'Statistics' }).click();
+  await this.page.locator('#look-btn').click();
+  await this.page.locator('#sheet-look .look-tab[data-tab="front"]').click();
+  await this.page.locator('#sheet-look .look-pick[data-cards="original"]').click();
+  await this.page.locator('#board[data-cards="original"]').waitFor();
+  await this.page.locator('#sheet-look .sheet-close, #sheet-look [data-close]').first().click();
+  await this.page.locator('#sheet-look.hidden').waitFor({ state: 'attached' });
   assert.equal(await css(this.page, '#tableau .card', 'background-color'), colors.cream);
   const shadowLayers = (await css(this.page, '#tableau .card', 'box-shadow')).split('),').length;
   assert.ok(shadowLayers <= 2, `expected at most two card shadow layers, got ${shadowLayers}`);

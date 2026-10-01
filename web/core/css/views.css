@@ -139,3 +139,54 @@
 .swatch.casino { background: linear-gradient(180deg, #16344e, #061018); --chip-back: #0e2744; }
 .swatch.parlor { background: linear-gradient(180deg, #6a2438, #2a0c16); --chip-back: #1d4e89; }
 
+
+/* ---------- appearance tabs: Table | Front | Back | Finish ----------
+   views.js moves the existing lists into panes. The preview sits above the
+   tabs and Done stays pinned below, so nothing needs a scroll to reach. */
+.look-preview[hidden], .look-tabs[hidden], .look-tab[hidden], .look-pane[hidden] { display: none !important; }
+.sheet-panel.look-tabbed {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  height: min(790px, calc(100% - env(safe-area-inset-top) - 24px));
+}
+.sheet-panel.look-tabbed > * { flex: none; }
+.sheet-panel.look-tabbed > .look-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 4px; }
+.sheet-panel.look-tabbed > .sheet-close { margin-top: 10px; }
+.look-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 12px; }
+.look-preview .look-cards { --cw: 54px; --ch: 78.3px; gap: 8px; }
+.look-preview-text { font-size: 13px; color: var(--ol-ink-dim, var(--ink-dim)); text-align: center; }
+.look-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background-color: var(--ol-surface, var(--glass));
+  border: 1px solid var(--ol-surface-edge, var(--glass-edge));
+}
+.look-tab {
+  height: 38px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ol-ink, var(--ink));
+}
+.look-tab[aria-selected="true"] {
+  color: #2a1f08;
+  background-color: var(--ol-gold, var(--gold));
+  background-image: linear-gradient(180deg, #f6dc98, var(--ol-gold, var(--gold)) 60%, #d8ad4b);
+}
+.look-pane .theme-row { margin-bottom: 0; }
+.look-pane .finish-row { margin-bottom: 0; }
+.look-pane .finish-pick { padding: 14px 4px 12px; }
+.look-pane .finish-pick .look-cards { --cw: 44px; --ch: 63.8px; gap: 6px; }
+.look-pane .back-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
+.look-pane .back-pick { flex-direction: column; justify-content: center; gap: 8px; padding: 12px 4px 10px; text-align: center; font-size: 13px; font-weight: 650; }
+.look-pane .back-pick .look-cards { --cw: 58px; --ch: 84.1px; }
+.look-pane .card-list { margin-bottom: 0; }
+
+.look-pane .theme-kicker { display: none; }
+.look-pane > [hidden] { display: none; }

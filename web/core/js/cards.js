@@ -30,6 +30,7 @@
     { id: 'picture', name: 'Picture', layout: 'trad', court: 'double' },
     { id: 'bust', name: 'Bust', layout: 'trad', court: 'bust' },
     { id: 'cropped', name: 'Cropped', layout: 'trad', court: 'cut' },
+    { id: 'close', name: 'Close', layout: 'trad', court: 'close' },
     { id: 'jewel', name: 'Jewel', layout: 'trad', court: 'double' },
     { id: 'noir', name: 'Noir', layout: 'trad', court: 'double' },
     { id: 'vintage', name: 'Vintage', layout: 'trad', court: 'double' },
@@ -61,6 +62,7 @@
     { id: 'picture', name: 'Picture', file: 'picture.svg', sources: ['ol-spider'] },
     { id: 'bust', name: 'Bust', file: 'bust.svg', sources: ['ol-spider'] },
     { id: 'cropped', name: 'Cropped', file: 'cropped.svg', sources: ['ol-spider'] },
+    { id: 'close', name: 'Close', file: 'close.svg', sources: ['ol-spider'] },
     { id: 'jewel', name: 'Jewel', file: 'jewel.svg', sources: ['ol-spider'] },
     { id: 'noir', name: 'Noir', file: 'noir.svg', sources: ['ol-spider'] },
     { id: 'vintage', name: 'Vintage', file: 'vintage.svg', sources: ['ol-spider'] },
@@ -119,65 +121,17 @@
     '<circle cx="12" cy="7.1" r="4.7"/><circle cx="6.8" cy="14.1" r="4.7"/><circle cx="17.2" cy="14.1" r="4.7"/><path d="M12 8.2 7.6 13.6h8.8Z"/><path d="M12 12c.2 4.6 1 8 3.4 10.4H8.6C11 20 11.8 16.6 12 12Z"/>',
   ];
 
-  // Each court is drawn once, as the top half of the person (24 wide, 21 tall:
-  // crown to waist). It is shown three ways, chosen by the deck's data-court:
-  //   double  mirrored through the centre, like a traditional pack
-  //   bust    one head-and-torso cameo, the torso cut by a round frame
-  //   cut     one larger figure whose torso runs off the bottom edge of the card
-  // Colours come from the deck: robe = the suit's ink, the rest from
-  // --trim/--skin/--hair/--cline (and --pane behind a bust or cut figure).
-  const EYES = '<circle cx="10.9" cy="10.2" r=".38" class="cn"/><circle cx="13.1" cy="10.2" r=".38" class="cn"/>';
-  const HALF = {
-    13: // King: tall crown, full beard, sceptre
-      '<path class="cr" d="M2.5 21c0-3.8 3.1-5.6 6.5-6.2l3 2.8 3-2.8c3.4.6 6.5 2.4 6.5 6.2Z"/>' +
-      '<path class="ct" d="M8.2 14.6 12 19.2l3.8-4.6-1.2-.4L12 17l-2.6-2.8Z"/>' +
-      '<path class="cs" d="M4.6 21 5.3 9.6" stroke-width=".9"/><circle class="ct" cx="5.4" cy="8.8" r="1.1"/>' +
-      '<path class="ck" d="M10.7 13h2.6v2.4h-2.6Z"/>' +
-      '<path class="ch" d="M8.3 8.6c-.4 4.4.9 7.4 3.7 7.6 2.8-.2 4.1-3.2 3.7-7.6l-1 .7c.3 2.6-.7 4.2-2.7 4.5-2-.3-3-1.9-2.7-4.5Z"/>' +
-      '<ellipse class="ck" cx="12" cy="10.4" rx="2.9" ry="3.5"/>' + EYES +
-      '<path class="ct" d="M8.2 7.6h7.6v1.7H8.2Z"/>' +
-      '<path class="ct" d="M8.2 7.6 7.3 3l2.7 2.2L12 1.5l2 3.7L16.7 3l-.9 4.6Z"/>' +
-      '<circle class="cr" cx="12" cy="4.4" r=".7"/>',
-    12: // Queen: tiara, long hair, necklace
-      '<path class="ch" d="M7.6 8c-1.7 3.2-1.7 7.2-.4 9.8l2.3-2h5l2.3 2c1.3-2.6 1.3-6.6-.4-9.8Z"/>' +
-      '<path class="cr" d="M3 21c.2-3 3.2-4.6 6.4-5 .8 1.2 4.4 1.2 5.2 0 3.2.4 6.2 2 6.4 5Z"/>' +
-      '<path class="cs" d="M9.4 16c.8 1.4 4.4 1.4 5.2 0" stroke-width=".9"/>' +
-      '<circle class="ct" cx="10.6" cy="17.5" r=".45"/><circle class="ct" cx="12" cy="17.9" r=".45"/><circle class="ct" cx="13.4" cy="17.5" r=".45"/>' +
-      '<path class="ck" d="M10.8 13.6h2.4v2.6h-2.4Z"/>' +
-      '<ellipse class="ck" cx="12" cy="10.7" rx="2.8" ry="3.4"/>' + EYES.replace(/cy="10.2"/g, 'cy="10.4"') +
-      '<path class="ch" d="M9 9.8c1.2-1.8 4.8-1.8 6 0-1.4-.8-4.6-.8-6 0Z"/>' +
-      '<path class="ct" d="M8.6 7.6h6.8V9H8.6Z"/>' +
-      '<path class="ct" d="M8.6 7.6 8.1 4.6l2.1 1.5L12 3.2l1.8 2.9 2.1-1.5-.5 3Z"/>' +
-      '<circle class="cr" cx="12" cy="4.6" r=".65"/>',
-    11: // Jack: feathered cap, short hair, tunic
-      '<path class="cr" d="M3.4 21c0-3.4 3-5.4 6.2-6l2.4 1.6 2.4-1.6c3.2.6 6.2 2.6 6.2 6Z"/>' +
-      '<path class="ct" d="M9.6 15 12 17.5l2.4-2.5-.8-.4-1.6 1.2-1.6-1.2Z"/>' +
-      '<path class="cs" d="M3.6 19.4h16.8" stroke-width=".8"/>' +
-      '<path class="ck" d="M10.8 13.2h2.4v2.2h-2.4Z"/>' +
-      '<path class="ch" d="M8.2 8.6c-.5 2.4.1 3.8 1.2 4.4h5.2c1.1-.6 1.7-2 1.2-4.4Z"/>' +
-      '<ellipse class="ck" cx="12" cy="10.9" rx="2.7" ry="3.1"/>' + EYES.replace(/cy="10.2"/g, 'cy="10.6"') +
-      '<path class="cr" d="M7.6 8.6C7.3 5.4 9.9 3.6 12.6 3.8c2.8.2 4.4 2.2 4 4.8-1.6-1-7.4-1-9 0Z"/>' +
-      '<path class="ct" d="M7.7 8.2c1.6-1 7.2-1 8.9 0v.9c-1.7-1-7.2-1-8.9 0Z"/>' +
-      '<path class="ct" d="M15.4 5.4C17.8 3 20.4 2.6 21.4 1c-.3 3.2-2.4 5.6-5.2 6.2Z"/>',
-  };
-
-  function courtSymbols(rank) {
-    const label = RANK_LABEL[rank];
-    const double = `<symbol id="court-${label}" viewBox="0 0 24 42">` +
-      `<g id="half-${label}">${HALF[rank]}</g>` +
-      `<use href="#half-${label}" transform="rotate(180 12 21)"/></symbol>`;
-    const bust = `<symbol id="bust-${label}" viewBox="0 0 24 24">` +
-      '<circle class="pane" cx="12" cy="12.5" r="11.4"/>' +
-      `<g clip-path="url(#bust-clip)"><g transform="translate(0 3)">${HALF[rank]}</g></g>` +
-      '<circle class="ring" cx="12" cy="12.5" r="11.4"/></symbol>';
-    const cut = `<symbol id="cut-${label}" viewBox="2 1.2 20 16.6" preserveAspectRatio="xMidYMax slice">` +
-      `<rect class="pane" x="-8" y="-8" width="40" height="40"/>${HALF[rank]}</symbol>`;
-    return double + bust + cut;
-  }
+  // Court figures are illustrations, one per rank and suit, in core/assets/courts.
+  // A card shows one of them four ways, chosen by the deck's data-court:
+  //   double  the head-and-shoulders twice, the second turned over, like a traditional pack
+  //   bust    one head-and-torso cameo in a round frame
+  //   cut     one larger figure whose torso runs off the bottom edge
+  //   close   zoomed in: the face sits in the bottom-right corner and its right edge is cropped
+  // cards.css paints the picture; the markup below only provides the windows.
 
   function defsMarkup() {
     const suits = SU_PATH.map((p, i) => `<symbol id="su-${i}" viewBox="0 0 24 24">${p}</symbol>`).join('');
-    return `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${suits}<clipPath id="bust-clip"><circle cx="12" cy="12.5" r="11.4"/></clipPath>${[11, 12, 13].map(courtSymbols).join('')}</defs></svg>`;
+    return `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${suits}</defs></svg>`;
   }
 
   function suit(i, cls) {
@@ -194,11 +148,10 @@
     let body;
     if (court) {
       body = `<div class="face-letter">${label}</div>` +
-        `<svg class="court-art double" viewBox="0 0 24 42" aria-hidden="true"><use href="#court-${label}"/>` +
-        `<use href="#su-${card.suit}" class="ce" x="14.3" y="16.4" width="3.4" height="3.4"/>` +
-        `<use href="#su-${card.suit}" class="ce" x="14.3" y="16.4" width="3.4" height="3.4" transform="rotate(180 12 21)"/></svg>` +
-        `<svg class="court-art bust" viewBox="0 0 24 24" aria-hidden="true"><use href="#bust-${label}"/></svg>` +
-        `<svg class="court-art cut" aria-hidden="true"><use href="#cut-${label}"/></svg>`;
+        '<div class="court-art double"><i></i><i></i></div>' +
+        '<div class="court-art bust"></div>' +
+        '<div class="court-art cut"></div>' +
+        '<div class="court-art close"></div>';
     } else {
       const { size, spots } = PIPS[card.rank];
       const pips = spots.map(([x, y]) =>

@@ -221,26 +221,131 @@
     return Themes.forDescriptor(descriptor || { id: 'olspider', hasCards: true });
   }
 
+  /** The sheet an appearance list lives in, when it lives in one (the gallery's lists do not). */
+  function sheetPanelOf(el) {
+    return el && el.closest ? el.closest('.sheet-panel') : null;
+  }
+
   function ensureBackList(cardList, backList) {
     if (backList) return backList;
     if (!cardList || !cardList.parentElement) return null;
-    let el = cardList.parentElement.querySelector('[data-ol-backs]');
+    const panel = sheetPanelOf(cardList);
+    let el = (panel || cardList.parentElement).querySelector('[data-ol-backs]');
     if (!el) {
-      const kicker = document.createElement('p');
-      kicker.className = 'theme-kicker';
-      kicker.textContent = 'Backs';
       el = document.createElement('div');
       el.dataset.olBacks = '';
       el.className = 'back-row';
-      cardList.parentElement.insertBefore(el, cardList);
-      cardList.parentElement.insertBefore(kicker, el);
+      if (panel) panel.insertBefore(el, panel.querySelector('.sheet-close'));
+      else cardList.parentElement.insertBefore(el, cardList);
+      if (!panel) {
+        const kicker = document.createElement('p');
+        kicker.className = 'theme-kicker';
+        kicker.textContent = 'Backs';
+        cardList.parentElement.insertBefore(kicker, el);
+      }
     }
     return el;
+  }
+
+  // ------------------------------------------------------------------ tabs
+
+  const TABS = [
+    { id: 'table', label: 'Table' },
+    { id: 'front', label: 'Front' },
+    { id: 'back', label: 'Back' },
+    { id: 'finish', label: 'Finish' },
+  ];
+
+  function node(tag, className, attrs) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    return el;
+  }
+
+  /** Show one tab's pane. The choice is remembered on the panel for the next open. */
+  function showTab(panel, id) {
+    const tabs = [...panel.querySelectorAll('.look-tab')].filter((t) => !t.hidden);
+    const wanted = tabs.find((t) => t.dataset.tab === id) || tabs[0];
+    if (!wanted) return;
+    panel.dataset.olTab = wanted.dataset.tab;
+    for (const tab of panel.querySelectorAll('.look-tab')) {
+      const on = tab === wanted;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.tabIndex = on ? 0 : -1;
+    }
+    for (const pane of panel.querySelectorAll('.look-pane')) pane.hidden = pane.dataset.pane !== wanted.dataset.tab;
+  }
+
+  /**
+   * Turn a flat appearance sheet into tabs: Table, Front, Back, Finish. One live
+   * preview of the whole card sits above the tabs and the Done button stays
+   * pinned below, so nothing needs a scroll to reach. The lists keep their ids,
+   * classes and listeners; they are only moved into a pane.
+   */
+  function mountTabs(panel, lists) {
+    if (panel.dataset.olTabs) return;
+    panel.dataset.olTabs = '1';
+    const preview = node('div', 'look-preview', { 'aria-label': 'Preview' });
+    const tabbar = node('div', 'look-tabs', { role: 'tablist', 'aria-label': 'Appearance' });
+    const body = node('div', 'look-body');
+    // A list moves with its own wrapper (an app may listen on it); a wrapper that
+    // holds more than one list stays put and only the list moves.
+    const all = Object.values(lists).filter(Boolean);
+    const unit = (list) => {
+      if (!list) return null;
+      const parent = list.parentElement;
+      if (parent && parent !== panel && parent.parentElement === panel && all.filter((l) => parent.contains(l)).length === 1) return parent;
+      return list;
+    };
+    for (const tab of TABS) {
+      const btn = node('button', 'look-tab', { type: 'button', role: 'tab', 'data-tab': tab.id, 'aria-label': tab.label });
+      btn.textContent = tab.label;
+      tabbar.appendChild(btn);
+      const pane = node('div', 'look-pane', { role: 'tabpanel', 'data-pane': tab.id, 'aria-label': tab.label });
+      body.appendChild(pane);
+      if (lists[tab.id]) pane.appendChild(unit(lists[tab.id]));
+    }
+    tabbar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.look-tab');
+      if (btn && !btn.hidden) showTab(panel, btn.dataset.tab);
+    });
+    // The old headings and wrappers are replaced by the tabs.
+    for (const old of panel.querySelectorAll('.theme-kicker, #theme-picker, #finish-picker, #card-picker')) {
+      if (!body.contains(old)) old.hidden = true;
+    }
+    const done = panel.querySelector('.sheet-close');
+    if (done) panel.insertBefore(preview, done); else panel.appendChild(preview);
+    panel.insertBefore(tabbar, done || null);
+    panel.insertBefore(body, done || null);
+    showTab(panel, 'table');
+  }
+
+  /** Refresh the preview and which tabs apply. Called after every fill. */
+  function refreshTabs(panel, current, showCards) {
+    const preview = panel.querySelector('.look-preview');
+    panel.classList.toggle('look-tabbed', showCards);
+    preview.hidden = !showCards;
+    preview.textContent = '';
+    if (showCards) {
+      preview.appendChild(Cards.sampleDeck(current.cards, current.finish, Cards.SAMPLE_IDS, false, current.back));
+      const text = node('span', 'look-preview-text');
+      text.textContent = summary(current.theme, current.cards, current.finish, current.back);
+      preview.appendChild(text);
+    }
+    for (const tab of panel.querySelectorAll('.look-tab')) tab.hidden = !showCards && tab.dataset.tab !== 'table';
+    panel.querySelector('.look-tabs').hidden = !showCards;
+    showTab(panel, panel.dataset.olTab || 'table');
   }
 
   function fillAppearance({ themeList, finishList, cardList, descriptor, current, themeKicker, finishKicker, cardKicker, themes }) {
     const showCards = !descriptor || descriptor.hasCards !== false;
     const themeListItems = themeChoices(descriptor, themes);
+    const panel = sheetPanelOf(themeList || cardList);
+    const backList = showCards ? ensureBackList(cardList, arguments[0].backList) : null;
+    if (panel && !panel.dataset.olTabs) {
+      mountTabs(panel, { table: themeList, front: cardList, back: backList, finish: finishList });
+    }
     if (themeKicker) themeKicker.hidden = false;
     if (themeList) {
       themeList.textContent = '';
@@ -279,7 +384,6 @@
         }
       }
     }
-    const backList = showCards ? ensureBackList(cardList, arguments[0].backList) : null;
     if (backList) {
       backList.textContent = '';
       backList.hidden = !showCards;
@@ -292,7 +396,7 @@
         btn.setAttribute('aria-pressed', back.id === (current.back || Cards.defaultBack(current.cards)) ? 'true' : 'false');
         const name = document.createElement('span');
         name.textContent = back.name;
-        btn.append(Cards.sampleDeck(current.cards, current.finish, [Cards.SAMPLE_IDS[0]], false, back.id), name);
+        btn.append(Cards.sampleDeck(current.cards, current.finish, panel ? [] : [Cards.SAMPLE_IDS[0]], false, back.id), name);
         backList.appendChild(btn);
       }
     }
@@ -311,11 +415,12 @@
           const name = document.createElement('span');
           name.className = 'look-name';
           name.textContent = style.name;
-          btn.append(name, Cards.sampleDeck(style.id, current.finish));
+          btn.append(name, Cards.sampleDeck(style.id, current.finish, null, !!panel));
           cardList.appendChild(btn);
         }
       }
     }
+    if (panel) refreshTabs(panel, current, showCards);
   }
 
   function summary(themeId, cardsId, finishId, backId) {
