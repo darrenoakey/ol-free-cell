@@ -14,3 +14,18 @@ Feature: Appearance persists
     When the appearance sheet is opened
     And I pick the "emerald" table and "classic" cards
     Then a classic card has no ring or outline
+
+  Scenario: Numbers and Faces are independently chosen and persist
+    Given the daily app is open
+    When the appearance sheet is opened
+    And I pick the "emerald" table and "picture" cards
+    Then the appearance sheet has the tabs Table, Look, Numbers, Faces, Back and Finish
+    When I choose the "single" numbers
+    And I choose the "close" faces
+    Then the board numbers are "single"
+    And the board faces are "close"
+    And a number card shows the big suit treatment
+    And a court card shows the close figure treatment
+    When I reload the daily app
+    Then the board numbers are "single"
+    And the board faces are "close"

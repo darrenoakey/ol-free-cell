@@ -50,7 +50,7 @@ const App = {
   stats: null,
   historyDoc: null,
   settings: { theme: 'emerald' },
-  look: { theme: 'emerald', cards: 'classic', finish: 'natural' },
+  look: { theme: 'emerald', cards: 'classic', finish: 'natural', numbers: 'look', faces: 'look' },
   _recordableOnFinish: true,
   calMonth: null,
   calendarPlay: false,
@@ -99,20 +99,25 @@ const App = {
     if (!cards) cards = 'classic';
     if (!finish) finish = 'natural';
     const back = await OL.Store.get(OL.Store.key(APP_ID, 'back'));
-    this.applyLook(theme, cards, finish, back);
+    const numbers = await OL.Store.get(OL.Store.key(APP_ID, 'numbers'));
+    const faces = await OL.Store.get(OL.Store.key(APP_ID, 'faces'));
+    this.applyLook(theme, cards, finish, back, numbers || 'look', faces || 'look');
   },
 
-  applyLook(themeId, cardsId, finishId, backId) {
+  applyLook(themeId, cardsId, finishId, backId, numbersId, facesId) {
     const theme = OL.Themes.BY_ID[themeId] ? themeId : 'emerald';
     const back = backId || (this.look && this.look.back) || OL.Cards.defaultBack(cardsId);
-    const cards = OL.Cards.dress($('board'), cardsId, finishId, back);
+    // Classic has printed art but retains these choices for the next drawn look.
+    const numbers = OL.Cards.NUMBER_BY_ID[numbersId] ? numbersId : (this.look.numbers || 'look');
+    const faces = OL.Cards.FACE_BY_ID[facesId] ? facesId : (this.look.faces || 'look');
+    const cards = OL.Cards.dress($('board'), cardsId, finishId, back, numbers, faces);
     const finish = $('board').dataset.finish;
     const usedBack = $('board').dataset.back;
     OL.Themes.apply(theme);
     document.body.classList.remove('theme-emerald', 'theme-midnight', 'theme-ol');
     if (theme === 'emerald' || theme === 'midnight') document.body.classList.add(`theme-${theme}`);
     else document.body.classList.add('theme-ol');
-    this.look = { theme, cards, finish, back: usedBack };
+    this.look = { theme, cards, finish, back: usedBack, numbers, faces };
     this.settings = { theme: theme === 'midnight' ? 'midnight' : 'emerald' };
     OL.Views.fillAppearance({
       themeList: $('theme-list'),
@@ -122,7 +127,7 @@ const App = {
       current: this.look,
     });
     const summary = $('look-summary');
-    if (summary) summary.textContent = OL.Views.summary(theme, cards, finish, usedBack);
+    if (summary) summary.textContent = OL.Views.summary(theme, cards, finish, usedBack, numbers, faces);
     UI.setThemeLabel(theme);
     if (this.game) UI.render(this.game, this.stats, this.context);
     return this.look;
@@ -133,6 +138,8 @@ const App = {
     await OL.Store.set(OL.Store.key(APP_ID, 'cards'), this.look.cards);
     await OL.Store.set(OL.Store.key(APP_ID, 'finish'), this.look.finish);
     await OL.Store.set(OL.Store.key(APP_ID, 'back'), this.look.back);
+    await OL.Store.set(OL.Store.key(APP_ID, 'numbers'), this.look.numbers);
+    await OL.Store.set(OL.Store.key(APP_ID, 'faces'), this.look.faces);
     if (this.look.theme === 'emerald' || this.look.theme === 'midnight') {
       await OL.Store.setJSON(SETTINGS_KEY, { theme: this.look.theme });
     }
@@ -493,6 +500,18 @@ const App = {
       this.persistLook();
     });
     $('sheet-look').addEventListener('click', (event) => {
+      const number = event.target.closest('.number-pick');
+      if (number && OL.Cards.NUMBER_BY_ID[number.dataset.numbers]) {
+        this.applyLook(this.look.theme, this.look.cards, this.look.finish, undefined, number.dataset.numbers);
+        this.persistLook();
+        return;
+      }
+      const face = event.target.closest('.face-pick');
+      if (face && OL.Cards.FACE_BY_ID[face.dataset.faces]) {
+        this.applyLook(this.look.theme, this.look.cards, this.look.finish, undefined, undefined, face.dataset.faces);
+        this.persistLook();
+        return;
+      }
       const btn = event.target.closest('.back-pick');
       if (!btn || !OL.Cards.BACK_BY_ID[btn.dataset.back]) return;
       this.applyLook(this.look.theme, this.look.cards, this.look.finish, btn.dataset.back);

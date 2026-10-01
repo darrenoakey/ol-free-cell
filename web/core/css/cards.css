@@ -454,6 +454,82 @@
 [data-cards][data-finish="stark"] .card.up .su,
 [data-cards][data-finish="stark"] .card.up .bigsu { filter: none; }
 
+/* ---------- numbers and faces: chosen apart from the look ----------
+   data-numbers (pips | single) and data-faces (letter | double | bust | cut | close)
+   override how the look draws number cards and picture cards. "look" (the
+   default) leaves the look alone. These rules come last so that, at equal
+   specificity, they win over every look's own layout rules. */
+[data-numbers="pips"] .card.up:not(.court) .corner,
+[data-numbers="pips"] .card.up:not(.court) .pip,
+[data-numbers="pips"] .card.up:not(.court) .bigsu,
+[data-numbers="single"] .card.up:not(.court) .corner,
+[data-numbers="single"] .card.up:not(.court) .pip,
+[data-numbers="single"] .card.up:not(.court) .pips { display: none; }
+[data-numbers="pips"] .card.up:not(.court) .index,
+[data-numbers="single"] .card.up:not(.court) .index { display: flex; left: 3px; top: 2px; }
+[data-numbers="pips"] .card.up:not(.court) .index {
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  line-height: 0.82;
+}
+[data-numbers="pips"] .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.27); letter-spacing: -0.06em; }
+[data-numbers="pips"] .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; font-size: calc(var(--cw) * 0.25); }
+[data-numbers="pips"] .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.19); height: calc(var(--cw) * 0.19); margin: calc(var(--cw) * 0.03) 0 0; }
+[data-numbers="pips"] .card.up:not(.court) .pips { display: block; }
+[data-numbers="single"] .card.up:not(.court) .index {
+  flex-direction: row;
+  align-items: center;
+  gap: calc(var(--cw) * 0.03);
+  line-height: 1;
+}
+[data-numbers="single"] .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.38); letter-spacing: -0.05em; }
+[data-numbers="single"] .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; }
+[data-numbers="single"] .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.22); height: calc(var(--cw) * 0.22); margin: 0; }
+[data-numbers="single"] .card.up:not(.court) .bigsu {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--cw) * 0.62);
+  height: calc(var(--cw) * 0.62);
+  margin: calc(var(--cw) * -0.2) 0 0 calc(var(--cw) * -0.31);
+  pointer-events: none;
+}
+[data-numbers="single"] .card.up[data-rank="1"] .bigsu {
+  width: calc(var(--cw) * 0.82);
+  height: calc(var(--cw) * 0.82);
+  margin: calc(var(--cw) * -0.3) 0 0 calc(var(--cw) * -0.41);
+}
+
+[data-faces="letter"] .card.court.up .index,
+[data-faces="letter"] .card.court.up .pip,
+[data-faces="letter"] .card.court.up .bigsu,
+[data-faces="letter"] .card.court.up .court-art { display: none; }
+[data-faces="letter"] .card.court.up .corner { display: flex; }
+[data-faces="letter"] .card.court.up .face-letter { display: block; }
+
+:is([data-faces="double"], [data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .corner,
+:is([data-faces="double"], [data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .pip,
+:is([data-faces="double"], [data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .face-letter { display: none; }
+:is([data-faces="double"], [data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .index { display: flex; }
+[data-faces="double"] .card.court.up .court-art.double,
+[data-faces="bust"] .card.court.up .court-art.bust,
+[data-faces="cut"] .card.court.up .court-art.cut,
+[data-faces="close"] .card.court.up .court-art.close { display: block; }
+[data-faces="double"] .card.court.up .bigsu { display: none; }
+:is([data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .bigsu {
+  display: block;
+  position: absolute;
+  right: calc(var(--cw) * 0.08);
+  top: calc(var(--ch) * 0.045);
+  left: auto;
+  margin: 0;
+  width: calc(var(--cw) * 0.22);
+  height: calc(var(--cw) * 0.22);
+  pointer-events: none;
+}
+
 /* ---------- state glow wins over every look and finish ---------- */
 [data-cards] .card.up.hint-src { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(233, 196, 106, 0.8); }
 [data-cards] .card.up.dragging { box-shadow: var(--lift, 0 0 0 0.5px rgba(80, 60, 20, 0.35), 0 12px 24px rgba(5, 2, 20, 0.55)); }
@@ -482,7 +558,7 @@
 .look-text small { font-size: 12.5px; color: var(--ol-ink-dim, var(--ink-dim)); }
 
 .card-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
-.look-pick {
+.look-pick, .number-pick, .face-pick {
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -493,9 +569,9 @@
   border: 1px solid var(--ol-surface-edge, var(--glass-edge));
   color: var(--ol-ink, var(--ink));
 }
-.look-pick[aria-pressed="true"] { color: var(--ol-ink, var(--ink)); background-color: var(--ol-surface, var(--glass)); box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }
+.look-pick[aria-pressed="true"], .number-pick[aria-pressed="true"], .face-pick[aria-pressed="true"] { color: var(--ol-ink, var(--ink)); background-color: var(--ol-surface, var(--glass)); box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }
 .look-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 650; letter-spacing: 0.02em; }
-.look-pick[aria-pressed="true"] .look-name::after {
+.look-pick[aria-pressed="true"] .look-name::after, .number-pick[aria-pressed="true"] .look-name::after, .face-pick[aria-pressed="true"] .look-name::after {
   content: '\2713';
   display: grid;
   place-items: center;
@@ -747,6 +823,12 @@
 [data-back="neon"] .card.down { background-image: url("../assets/backs/neon.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
 [data-back="classic"] .card.down { background-image: url("../assets/backs/classic.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
 [data-back="fairway"] .card.down { background-image: url("../assets/backs/fairway.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="scroll-red"] .card.down { background-image: url("../assets/backs/scroll-red.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="scroll-blue"] .card.down { background-image: url("../assets/backs/scroll-blue.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="medallion-red"] .card.down { background-image: url("../assets/backs/medallion-red.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="medallion-blue"] .card.down { background-image: url("../assets/backs/medallion-blue.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="lattice-red"] .card.down { background-image: url("../assets/backs/lattice-red.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="lattice-blue"] .card.down { background-image: url("../assets/backs/lattice-blue.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
 .back-row { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
 .back-pick {
   display: flex; align-items: center; gap: 10px;

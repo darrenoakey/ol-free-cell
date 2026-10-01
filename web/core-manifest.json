@@ -1,6 +1,6 @@
 {
   "version": "0.2.0",
-  "commit": "6f21d1bc7d42bda4ee0007f2c270e7b5fcdad748",
+  "commit": "ffad0ee613caab969adb223687784caef0fced42",
   "apiVersion": 2,
   "files": {
     "core/assets/backs/bust.svg": "41706a71f8cd832441d860a1464686ed044c86b0cb727cdc35c8fac0deea98a5",
@@ -11,10 +11,16 @@
     "core/assets/backs/fairway.svg": "ffbeefe98826f58346a25d65987dcd309d0983e353f56798ba16a038ebdda8fa",
     "core/assets/backs/index.svg": "3caa87e718ab23d26b3a815e3b0e53444191ff46dcf7b05d999bfdbb4fd8d497",
     "core/assets/backs/jewel.svg": "69002c034a0fcef062038d272419b6b4f19f97db00437d74d236b30efaab838c",
+    "core/assets/backs/lattice-blue.webp": "04f1d4ea02980f69e9ea6eebacd6c494864ad0c7bf63bdbfe49d8432539828eb",
+    "core/assets/backs/lattice-red.webp": "05f8ac47106d5031e00dae229068020ecd67bf5dee5a3aff00c1f71d9a8b262c",
+    "core/assets/backs/medallion-blue.webp": "f5b48c09416cde1d623dc73e0167127137bbc8b3a9d46976ae8d01fe7e66044f",
+    "core/assets/backs/medallion-red.webp": "4c8143fb019400039e7ae203bf842560cec259cd1ec4476cbac1c22675137752",
     "core/assets/backs/neon.svg": "226ceeb4cb7df835120d3113ac569f3fb037b13cf6d851c4a504ba03c9f1f6c0",
     "core/assets/backs/noir.svg": "80e81180fb91a5832549d81d48ad44bf0e2297930987762d69f63596d943c04b",
     "core/assets/backs/pastel.svg": "4a888f024a519f3192004e0dd11eb44134cfbaa06f474c7f72359a44fd131504",
     "core/assets/backs/picture.svg": "be180cb2d8cf9a714a36b6430e378973ae1f5857281ef9272f424fcc40183c7f",
+    "core/assets/backs/scroll-blue.webp": "ac68b51f3d5c49f16dd6d63a06f2ca0c4b4e32f2ddbfa11c3785ff0e2a177df9",
+    "core/assets/backs/scroll-red.webp": "bd4f30f7c081718e88630fc477b35232de29a32a2c7982ee616589f7dce8b958",
     "core/assets/backs/vintage.svg": "625ec2e2c5784b48436a47b7e513e5ea047297d957b9bb3251f616b0ff29630c",
     "core/assets/courts/J-clubs.webp": "4128bebf220771db7c0a3c5f8a19273e398adf13c133c47cccc7fb92c6d2fe1e",
     "core/assets/courts/J-diamonds.webp": "1b6b2c53073ffa45a5f58d91d253d8a4ef76a8b80417ec4e0ecdf12065aedc9d",
@@ -83,12 +89,12 @@
     "core/assets/themes/parchment.svg": "90b1721ff067d8a9c47790de181c0967a8ec1826857d68100de94ae2ff514b3e",
     "core/contract/contract.feature": "068b870849ccfee63fd79f0aae9a6eb7c081afcdd763e249926b74663736b2a8",
     "core/contract/steps.js": "804bbc82259837e4fd9ad7a88c2f86d9c5ef684b522ea96e13030ca085871c13",
-    "core/css/cards.css": "aa260f950f354100a73dd59dbd78feb10851c7867850a853e7dcf31ece3141a1",
+    "core/css/cards.css": "a33ab0c67ac16aea5637d7d624e7721e4f6581739ad691b97eeb5ffdaa6a4e97",
     "core/css/chrome.css": "2a1981c66b4e4df9a6977eacf4b7ec677cf00eaf7b7ad7c668b04dbcedd51b77",
     "core/css/themes.css": "b07be676a1b901b902a59a2d4e31cc2c50826d2f55cc11223e4f6b20af42d1d3",
-    "core/css/views.css": "dadefd441415fcde8804089e4d5150edf91c079e5db5399d8773fe87996dc41f",
+    "core/css/views.css": "a55b0473d604030dce7abd768dffb08a204b0eee2f89e1f6bf58790e4215d756",
     "core/js/awards.js": "4e3ef963ccae4d46c5fe9d171283030e157fca5bdf700421b05c36c3cf61d757",
-    "core/js/cards.js": "620d9bdd00368797c01d20747bb3e34344ca3af4afdb00601f82af00a17220c0",
+    "core/js/cards.js": "a1f6cdd06d477c3b5335f3225ff362125734f77de65e454350570bd428e7bded",
     "core/js/chrome.js": "eec13b8a54330ebfa31609d546cb66e04a96261f632ec301434cebe922b7e7d0",
     "core/js/confetti.js": "984f0df108187bbce2f3bc985b281ae61c0b19205161a5c05a195cf9d569f760",
     "core/js/history.js": "eeafc5c3d9ae6cc196318a98ac4a7ab40c20ae6ed12b9d891e580ae47535d61e",
@@ -97,6 +103,6 @@
     "core/js/stats.js": "c8868139f1bde72dc4515b92a410451827b9524bfcef88b458d3ef7377228c06",
     "core/js/store.js": "02eb948da38dd9ce0c6ab1c995318e8f2257892d3a237f57fac8d95a823254e5",
     "core/js/themes.js": "2a1a552df416f2192a25d14a3bc8ac78496ced307ea0d3bd180907781c99e582",
-    "core/js/views.js": "f835ff1c805ff970f4c54e07e12533980a0fa69117a3acb29093eb90969f519d"
+    "core/js/views.js": "c2f105bffdcbfa0e4c52bbcf6d29bbb6ca2adb14e44d3a7948823f2ac3bd4ca9"
   }
 }

@@ -247,11 +247,29 @@
     return el;
   }
 
+  /** A list core adds to the sheet itself (Numbers, Faces). Only sheets are tabbed, so only sheets get one. */
+  function ensureSheetList(panel, given, key, className) {
+    if (given) return given;
+    if (!panel) return null;
+    let el = panel.querySelector(`[data-ol-${key}]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.setAttribute(`data-ol-${key}`, '');
+      el.className = className;
+      panel.insertBefore(el, panel.querySelector('.sheet-close'));
+    }
+    return el;
+  }
+
   // ------------------------------------------------------------------ tabs
 
+  // Numbers and Faces are offered only by an app that stores them (it passes
+  // current.numbers / current.faces); every other app keeps the four plain tabs.
   const TABS = [
     { id: 'table', label: 'Table' },
     { id: 'front', label: 'Front' },
+    { id: 'numbers', label: 'Numbers' },
+    { id: 'faces', label: 'Faces' },
     { id: 'back', label: 'Back' },
     { id: 'finish', label: 'Finish' },
   ];
@@ -322,19 +340,32 @@
   }
 
   /** Refresh the preview and which tabs apply. Called after every fill. */
-  function refreshTabs(panel, current, showCards) {
+  function refreshTabs(panel, current, showCards, offerChoices) {
+    const style = Cards.STYLE_BY_ID[current.cards] || Cards.STYLE_BY_ID.original;
+    const printed = style.layout === 'classic';
     const preview = panel.querySelector('.look-preview');
     panel.classList.toggle('look-tabbed', showCards);
     preview.hidden = !showCards;
     preview.textContent = '';
     if (showCards) {
-      preview.appendChild(Cards.sampleDeck(current.cards, current.finish, Cards.SAMPLE_IDS, false, current.back));
+      preview.appendChild(Cards.sampleDeck(current.cards, current.finish, Cards.SAMPLE_IDS, false, current.back, current.numbers, current.faces));
       const text = node('span', 'look-preview-text');
-      text.textContent = summary(current.theme, current.cards, current.finish, current.back);
+      text.textContent = summary(current.theme, current.cards, current.finish, current.back, current.numbers, current.faces);
       preview.appendChild(text);
     }
-    for (const tab of panel.querySelectorAll('.look-tab')) tab.hidden = !showCards && tab.dataset.tab !== 'table';
-    panel.querySelector('.look-tabs').hidden = !showCards;
+    let visible = 0;
+    for (const tab of panel.querySelectorAll('.look-tab')) {
+      const id = tab.dataset.tab;
+      let on = showCards || id === 'table';
+      // Classic prints its own faces, so there is nothing to choose for numbers and faces.
+      if ((id === 'numbers' || id === 'faces') && (!offerChoices || printed)) on = false;
+      tab.hidden = !on;
+      if (id === 'front') tab.textContent = offerChoices ? 'Look' : 'Front';
+      if (on) visible += 1;
+    }
+    const bar = panel.querySelector('.look-tabs');
+    bar.hidden = !showCards;
+    bar.style.setProperty('--tabs', String(Math.max(visible, 1)));
     showTab(panel, panel.dataset.olTab || 'table');
   }
 
@@ -343,8 +374,12 @@
     const themeListItems = themeChoices(descriptor, themes);
     const panel = sheetPanelOf(themeList || cardList);
     const backList = showCards ? ensureBackList(cardList, arguments[0].backList) : null;
+    const offerChoices = showCards && (current.numbers !== undefined || current.faces !== undefined);
+    const args = arguments[0];
+    const numberList = ensureSheetList(panel, args.numberList, 'numbers', 'card-list number-row');
+    const faceList = ensureSheetList(panel, args.faceList, 'faces', 'card-list face-row');
     if (panel && !panel.dataset.olTabs) {
-      mountTabs(panel, { table: themeList, front: cardList, back: backList, finish: finishList });
+      mountTabs(panel, { table: themeList, front: cardList, numbers: numberList, faces: faceList, back: backList, finish: finishList });
     }
     if (themeKicker) themeKicker.hidden = false;
     if (themeList) {
@@ -379,7 +414,7 @@
           btn.setAttribute('aria-pressed', finish.id === current.finish ? 'true' : 'false');
           const name = document.createElement('span');
           name.textContent = finish.name;
-          btn.append(Cards.sampleDeck(current.cards, finish.id, [Cards.SAMPLE_IDS[0], Cards.SAMPLE_IDS[3]], true), name);
+          btn.append(Cards.sampleDeck(current.cards, finish.id, [Cards.SAMPLE_IDS[0], Cards.SAMPLE_IDS[3]], true, undefined, current.numbers, current.faces), name);
           finishList.appendChild(btn);
         }
       }
@@ -396,7 +431,7 @@
         btn.setAttribute('aria-pressed', back.id === (current.back || Cards.defaultBack(current.cards)) ? 'true' : 'false');
         const name = document.createElement('span');
         name.textContent = back.name;
-        btn.append(Cards.sampleDeck(current.cards, current.finish, panel ? [] : [Cards.SAMPLE_IDS[0]], false, back.id), name);
+        btn.append(Cards.sampleDeck(current.cards, current.finish, panel ? [] : [Cards.SAMPLE_IDS[0]], false, back.id, current.numbers, current.faces), name);
         backList.appendChild(btn);
       }
     }
@@ -420,17 +455,46 @@
         }
       }
     }
-    if (panel) refreshTabs(panel, current, showCards);
+    fillChoiceList(numberList, offerChoices, Cards.NUMBERS, 'number-pick', 'numbers', 'Numbers', current.numbers || 'look',
+      (option) => Cards.sampleDeck(current.cards, current.finish, Cards.NUMBER_SAMPLE_IDS, true, current.back, option.id, 'look'));
+    fillChoiceList(faceList, offerChoices, Cards.FACES, 'face-pick', 'faces', 'Faces', current.faces || 'look',
+      (option) => Cards.sampleDeck(current.cards, current.finish, Cards.FACE_SAMPLE_IDS, true, current.back, 'look', option.id));
+    if (panel) refreshTabs(panel, current, showCards, offerChoices);
   }
 
-  function summary(themeId, cardsId, finishId, backId) {
+  /** One row of choices, each previewed with real cards drawn the way that choice draws them. */
+  function fillChoiceList(list, shown, options, className, dataKey, label, selected, sample) {
+    if (!list) return;
+    list.textContent = '';
+    list.hidden = !shown;
+    if (!shown) return;
+    for (const option of options) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = className;
+      btn.dataset[dataKey] = option.id;
+      btn.setAttribute('aria-label', `${option.name} ${label.toLowerCase()}`);
+      btn.setAttribute('aria-pressed', option.id === selected ? 'true' : 'false');
+      const name = document.createElement('span');
+      name.className = 'look-name';
+      name.textContent = option.name;
+      btn.append(name, sample(option));
+      list.appendChild(btn);
+    }
+  }
+
+  function summary(themeId, cardsId, finishId, backId, numbersId, facesId) {
     const theme = Themes.BY_ID[themeId] || Themes.BY_ID.twilight;
     const look = Cards.STYLE_BY_ID[cardsId] || Cards.STYLE_BY_ID.original;
     const finish = Cards.FINISH_BY_ID[finishId] || Cards.FINISH_BY_ID.natural;
     const finishName = finish.id === 'natural' ? '' : ` · ${finish.name}`;
     const back = backId && Cards.BACK_BY_ID[backId];
     const backName = back && back.id !== Cards.defaultBack(look) ? ` · ${back.name} back` : '';
-    return `${theme.name} · ${look.name}${finishName}${backName}`;
+    const numbers = look.layout !== 'classic' && Cards.NUMBER_BY_ID[numbersId];
+    const faces = look.layout !== 'classic' && Cards.FACE_BY_ID[facesId];
+    const numbersName = numbers && numbers.id !== 'look' ? ` · ${numbers.name} numbers` : '';
+    const facesName = faces && faces.id !== 'look' ? ` · ${faces.name} faces` : '';
+    return `${theme.name} · ${look.name}${finishName}${backName}${numbersName}${facesName}`;
   }
 
   root.OL.Views = {

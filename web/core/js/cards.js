@@ -41,6 +41,32 @@
   ];
   const STYLE_BY_ID = Object.fromEntries(STYLES.map((s) => [s.id, s]));
 
+  /**
+   * How number cards (A to 10) are drawn, independent of the look: the look's own
+   * way, the traditional little pips, or one big suit with a bigger rank.
+   */
+  const NUMBERS = [
+    { id: 'look', name: 'Match look' },
+    { id: 'pips', name: 'Pips' },
+    { id: 'single', name: 'Big suit' },
+  ];
+  const NUMBER_BY_ID = Object.fromEntries(NUMBERS.map((n) => [n.id, n]));
+
+  /**
+   * How the picture cards (J, Q, K) are drawn, independent of the look and of the
+   * numbers: the look's own way, a big letter in the corner style, or one of the
+   * four illustrated windows.
+   */
+  const FACES = [
+    { id: 'look', name: 'Match look' },
+    { id: 'letter', name: 'Letter' },
+    { id: 'double', name: 'Picture' },
+    { id: 'bust', name: 'Bust' },
+    { id: 'cut', name: 'Cropped' },
+    { id: 'close', name: 'Close' },
+  ];
+  const FACE_BY_ID = Object.fromEntries(FACES.map((f) => [f.id, f]));
+
   /** How a look is lit, independent of the look itself. */
   const FINISHES = [
     { id: 'natural', name: 'Natural' },
@@ -71,6 +97,12 @@
     { id: 'neon', name: 'Neon', file: 'neon.svg', sources: ['ol-spider'] },
     { id: 'classic', name: 'Classic', file: 'classic.svg', sources: ['ol-bridge', 'ol-free-cell', 'ol-core'] },
     { id: 'fairway', name: 'Fairway', file: 'fairway.svg', sources: ['ol-golf'] },
+    { id: 'scroll-red', name: 'Scroll Red', file: 'scroll-red.webp', sources: ['ol-core'] },
+    { id: 'scroll-blue', name: 'Scroll Blue', file: 'scroll-blue.webp', sources: ['ol-core'] },
+    { id: 'medallion-red', name: 'Medallion Red', file: 'medallion-red.webp', sources: ['ol-core'] },
+    { id: 'medallion-blue', name: 'Medallion Blue', file: 'medallion-blue.webp', sources: ['ol-core'] },
+    { id: 'lattice-red', name: 'Lattice Red', file: 'lattice-red.webp', sources: ['ol-core'] },
+    { id: 'lattice-blue', name: 'Lattice Blue', file: 'lattice-blue.webp', sources: ['ol-core'] },
   ];
   const BACK_BY_ID = Object.fromEntries(BACKS.map((b) => [b.id, b]));
 
@@ -84,6 +116,9 @@
 
   /** The four cards every look is previewed with: an ace, the busiest number card, two pictures. */
   const SAMPLE_IDS = [0, 22, 50, 38]; // A♠  10♥  Q♣  K♦
+  /** What a numbers choice is previewed with, and what a faces choice is previewed with. */
+  const NUMBER_SAMPLE_IDS = [0, 17, 34, 48]; // A♠  5♥  9♦  10♣
+  const FACE_SAMPLE_IDS = [0, 23, 50, 38]; // A♠  J♥  Q♣  K♦
 
   // ------------------------------------------------------------------ pips
 
@@ -176,22 +211,31 @@
     return el;
   }
 
-  /** Point a deck at a look, a finish, and an optional back. Unknown ids fall back. */
-  function dress(deck, id, finish, back) {
+  /**
+   * Point a deck at a look, a finish, an optional back, and optionally how number
+   * cards and picture cards are drawn. Unknown ids fall back; Classic prints its
+   * own faces, so it ignores the numbers and faces choices.
+   */
+  function dress(deck, id, finish, back, numbers, faces) {
     const style = STYLE_BY_ID[id] || STYLE_BY_ID.original;
+    const printed = style.layout === 'classic';
+    const n = !printed && NUMBER_BY_ID[numbers] ? numbers : 'look';
+    const f = !printed && FACE_BY_ID[faces] ? faces : 'look';
     deck.dataset.cards = style.id;
     deck.dataset.layout = style.layout;
-    deck.dataset.court = style.court || 'double';
+    deck.dataset.numbers = n;
+    deck.dataset.faces = f;
+    deck.dataset.court = f !== 'look' ? f : (style.court || 'double');
     deck.dataset.finish = (FINISH_BY_ID[finish] || FINISH_BY_ID.natural).id;
     deck.dataset.back = (BACK_BY_ID[back] || BACK_BY_ID[defaultBack(style)]).id;
     return style.id;
   }
 
   /** One picker row's cards: the back, then the four sample faces — all real cards. */
-  function sampleDeck(id, finish, ids, noBack, back) {
+  function sampleDeck(id, finish, ids, noBack, back, numbers, faces) {
     const deck = document.createElement('span');
     deck.className = 'look-cards';
-    dress(deck, id, finish, back);
+    dress(deck, id, finish, back, numbers, faces);
     if (!noBack) {
       const back = document.createElement('div');
       back.className = 'card down';
@@ -221,25 +265,30 @@
    */
   const CLASSIC_INDEX_BOTTOM = 240 / 768;
 
-  function minStackOffset(look, cardHeight) {
+  /** Where the index ends, in px, for one arrangement at a given card width. */
+  function indexBottom(layout, cw, ch) {
+    if (layout === 'index') return 2 + cw * 0.34 * 0.82 + cw * 0.23 + 4;
+    if (layout === 'trad') return 2 + cw * 0.27 * 0.82 + cw * 0.22 + 4;
+    if (layout === 'bold') return 2 + cw * 0.38 + 4;
+    if (layout === 'classic') return ch * CLASSIC_INDEX_BOTTOM + 2;
+    return 1 + cw * 0.40 + 4;
+  }
+
+  /**
+   * `choice` is the optional {numbers, faces}: the fan has to show the index of
+   * both the number cards and the picture cards, whichever way each is drawn.
+   */
+  function minStackOffset(look, cardHeight, choice) {
     const ch = Number(cardHeight);
     if (!Number.isFinite(ch) || ch <= 0) return 0;
     const style = STYLE_BY_ID[look] || STYLE_BY_ID.original;
     const cw = ch / 1.45;
-    const layout = style.layout;
-    let bottom;
-    if (layout === 'index') {
-      bottom = 2 + cw * 0.34 * 0.82 + cw * 0.23 + 4;
-    } else if (layout === 'trad') {
-      bottom = 2 + cw * 0.27 * 0.82 + cw * 0.22 + 4;
-    } else if (layout === 'bold') {
-      bottom = 2 + cw * 0.38 + 4;
-    } else if (layout === 'classic') {
-      bottom = ch * CLASSIC_INDEX_BOTTOM + 2;
-    } else {
-      bottom = 1 + cw * 0.40 + 4;
-    }
-    return Math.ceil(bottom);
+    const printed = style.layout === 'classic';
+    const numbers = !printed && choice && NUMBER_BY_ID[choice.numbers] ? choice.numbers : 'look';
+    const faces = !printed && choice && FACE_BY_ID[choice.faces] ? choice.faces : 'look';
+    const numberLayout = numbers === 'pips' ? 'trad' : (numbers === 'single' ? 'bold' : style.layout);
+    const faceLayout = faces === 'letter' ? 'modern' : (faces === 'look' ? style.layout : 'trad');
+    return Math.ceil(Math.max(indexBottom(numberLayout, cw, ch), indexBottom(faceLayout, cw, ch)));
   }
 
   function installDefs() {
@@ -251,7 +300,8 @@
 
   const Cards = {
     SUITS, SUIT_GLYPH, RANK_LABEL, STYLES, STYLE_BY_ID, FINISHES, FINISH_BY_ID,
-    BACKS, BACK_BY_ID, defaultBack,
+    BACKS, BACK_BY_ID, defaultBack, NUMBERS, NUMBER_BY_ID, FACES, FACE_BY_ID,
+    NUMBER_SAMPLE_IDS, FACE_SAMPLE_IDS,
     SAMPLE_IDS, PIPS, installDefs, cardElement, dress, sampleDeck, faceMarkup,
     cardFromId, resolveCard, setGeometry, minStackOffset,
   };

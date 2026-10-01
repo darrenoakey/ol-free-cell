@@ -23,6 +23,18 @@ When('I pick the {string} table and {string} cards', async function (theme, look
   );
 });
 
+When('I choose the {string} numbers', async function (numbers) {
+  await this.page.locator('#sheet-look .look-tab[data-tab="numbers"]').click();
+  await this.page.locator(`#sheet-look .number-pick[data-numbers="${numbers}"]`).click();
+  await this.page.locator(`#board[data-numbers="${numbers}"]`).waitFor();
+});
+
+When('I choose the {string} faces', async function (faces) {
+  await this.page.locator('#sheet-look .look-tab[data-tab="faces"]').click();
+  await this.page.locator(`#sheet-look .face-pick[data-faces="${faces}"]`).click();
+  await this.page.locator(`#board[data-faces="${faces}"]`).waitFor();
+});
+
 When('I reload the daily app', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
   await this.page.locator('#overlay-loading').waitFor({ state: 'hidden' });
@@ -35,6 +47,32 @@ Then('the table theme is {string}', async function (theme) {
 
 Then('the card look is {string}', async function (look) {
   assert.equal(await this.page.locator('#board').getAttribute('data-cards'), look);
+});
+
+Then('the appearance sheet has the tabs Table, Look, Numbers, Faces, Back and Finish', async function () {
+  assert.deepEqual(await this.page.locator('#sheet-look .look-tab').allInnerTexts(), [
+    'Table', 'Look', 'Numbers', 'Faces', 'Back', 'Finish',
+  ]);
+});
+
+Then('the board numbers are {string}', async function (numbers) {
+  assert.equal(await this.page.locator('#board').getAttribute('data-numbers'), numbers);
+});
+
+Then('the board faces are {string}', async function (faces) {
+  assert.equal(await this.page.locator('#board').getAttribute('data-faces'), faces);
+});
+
+Then('a number card shows the big suit treatment', async function () {
+  const display = await this.page.locator('#board .card.up:not(.court) .bigsu').first()
+    .evaluate((element) => getComputedStyle(element).display);
+  assert.equal(display, 'block');
+});
+
+Then('a court card shows the close figure treatment', async function () {
+  const display = await this.page.locator('#board .card.up.court .court-art.close').first()
+    .evaluate((element) => getComputedStyle(element).display);
+  assert.notEqual(display, 'none');
 });
 
 Then('a classic card has no ring or outline', async function () {

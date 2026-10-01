@@ -11,6 +11,7 @@ const contentTypes = new Map([
   ['.js', 'text/javascript'],
   ['.png', 'image/png'],
   ['.svg', 'image/svg+xml'],
+  ['.webp', 'image/webp'],
 ]);
 
 let browser;
