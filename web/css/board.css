@@ -1,12 +1,5 @@
 /* Board cards keep FreeCell's column geometry. OL card faces paint inside it.
-   Loaded after core/css/cards.css so the sunlit-felt assertions still hold.
-   themes.css writes `html[data-theme="emerald"], html[...] body::before { opacity: 0 }`,
-   which hides the document. Restore opacity here. */
-
-html[data-theme],
-html[data-ol-theme] {
-  opacity: 1;
-}
+   Loaded after core/css/cards.css so the sunlit-felt assertions still hold. */
 
 body.theme-emerald,
 body.theme-midnight {

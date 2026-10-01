@@ -2,5 +2,5 @@
 (function (root) {
   'use strict';
   root.OL = root.OL || {};
-  root.OL.apiVersion = 1;
+  root.OL.apiVersion = 2;
 })(globalThis);

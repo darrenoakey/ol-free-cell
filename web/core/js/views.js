@@ -103,14 +103,13 @@
     const max = Math.max(1, ...items.map((i) => i.possible));
     const base = height - 16;
     let svg = `<svg viewBox="0 0 ${w} ${height}" role="img">`;
-    svg += '<defs><linearGradient id="bar-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c0"/><stop offset=".55" stop-color="#e9c46a"/><stop offset="1" stop-color="#b98f35"/></linearGradient></defs>';
     items.forEach((it, k) => {
       const x = k * slot + (slot - bw) / 2;
       const full = ((base - 12) * it.possible) / max;
       const h = ((base - 12) * it.count) / max;
-      svg += `<rect x="${x}" y="${base - full}" width="${bw}" height="${full}" rx="${bw / 3}" fill="rgba(255,255,255,0.07)"/>`;
+      svg += `<rect class="bar-empty" x="${x}" y="${base - full}" width="${bw}" height="${full}" rx="${bw / 3}"/>`;
       if (it.count > 0) {
-        svg += `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="${bw / 3}" fill="url(#bar-g)"/>`;
+        svg += `<rect class="bar-fill" x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="${bw / 3}"/>`;
         svg += `<text class="val" x="${x + bw / 2}" y="${base - h - 3}" text-anchor="middle">${it.count}</text>`;
       }
       if ((n - 1 - k) % labelEvery === 0) {
@@ -130,14 +129,12 @@
     const y = (ms) => h - 14 - ((h - 26) * ms) / max;
     const pts = timed.map((r, i) => `${x(i).toFixed(1)},${y(r.ms).toFixed(1)}`);
     let svg = `<svg viewBox="0 0 ${w} ${h}" role="img">`;
-    svg += '<defs><linearGradient id="area-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9c46a" stop-opacity=".35"/><stop offset="1" stop-color="#e9c46a" stop-opacity="0"/></linearGradient></defs>';
-    svg += `<path d="M${pts[0]} L${pts.join(' L')} L${x(timed.length - 1).toFixed(1)},${h - 14} L${x(0).toFixed(1)},${h - 14} Z" fill="url(#area-g)"/>`;
-    svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="#e9c46a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    svg += `<polyline class="time-line" points="${pts.join(' ')}"/>`;
     if (avg) {
-      svg += `<line x1="8" x2="${w - 8}" y1="${y(avg)}" y2="${y(avg)}" stroke="rgba(243,220,160,.45)" stroke-dasharray="3 4"/>`;
+      svg += `<line class="time-avg" x1="8" x2="${w - 8}" y1="${y(avg)}" y2="${y(avg)}" stroke-dasharray="3 4"/>`;
       svg += `<text x="${w - 8}" y="${y(avg) - 4}" text-anchor="end">avg ${Stats.formatTime(avg)}</text>`;
     }
-    timed.forEach((r, i) => { svg += `<circle cx="${x(i)}" cy="${y(r.ms)}" r="2.6" fill="#fff3cc"/>`; });
+    timed.forEach((r, i) => { svg += `<circle class="time-dot" cx="${x(i)}" cy="${y(r.ms)}" r="2.6"/>`; });
     svg += `<text x="8" y="${h - 2}">${esc(timed[0].date.slice(5))}</text>`;
     svg += `<text x="${w - 8}" y="${h - 2}" text-anchor="end">${esc(timed[timed.length - 1].date.slice(5))}</text>`;
     return `${svg}</svg>`;

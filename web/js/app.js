@@ -121,6 +121,7 @@ const App = {
     const summary = $('look-summary');
     if (summary) summary.textContent = OL.Views.summary(theme, cards, finish);
     UI.setThemeLabel(theme);
+    if (this.game) UI.render(this.game, this.stats, this.context);
     return this.look;
   },
 

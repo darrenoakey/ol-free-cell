@@ -225,6 +225,34 @@
     deck.style.setProperty('--ch', typeof ch === 'number' ? ch + 'px' : String(ch));
   }
 
+  /**
+   * Minimum face-up fan, in pixels, that keeps the rank and suit index
+   * inside the visible strip. `cardHeight` is the rendered card height.
+   * Width is taken as the wider Spider aspect (height / 1.45) so FreeCell
+   * and Golf, which are narrower, still fit. Classic uses the markup index
+   * painted over the PNG, not the buried PNG letters.
+   */
+  function minStackOffset(look, cardHeight) {
+    const ch = Number(cardHeight);
+    if (!Number.isFinite(ch) || ch <= 0) return 0;
+    const style = STYLE_BY_ID[look] || STYLE_BY_ID.original;
+    const cw = ch / 1.45;
+    const layout = style.layout;
+    let bottom;
+    if (layout === 'index') {
+      bottom = 2 + cw * 0.34 * 0.82 + cw * 0.23 + 4;
+    } else if (layout === 'trad') {
+      bottom = 2 + cw * 0.27 * 0.82 + cw * 0.22 + 4;
+    } else if (layout === 'bold') {
+      bottom = 2 + cw * 0.38 + 4;
+    } else if (layout === 'classic') {
+      bottom = 1 + cw * 0.34 + 4;
+    } else {
+      bottom = 1 + cw * 0.40 + 4;
+    }
+    return Math.ceil(bottom);
+  }
+
   function installDefs() {
     if (document.getElementById('su-0')) return;
     const holder = document.createElement('div');
@@ -235,7 +263,7 @@
   const Cards = {
     SUITS, SUIT_GLYPH, RANK_LABEL, STYLES, STYLE_BY_ID, FINISHES, FINISH_BY_ID,
     SAMPLE_IDS, PIPS, installDefs, cardElement, dress, sampleDeck, faceMarkup,
-    cardFromId, resolveCard, setGeometry,
+    cardFromId, resolveCard, setGeometry, minStackOffset,
   };
   root.OL = root.OL || {};
   root.OL.Cards = Cards;

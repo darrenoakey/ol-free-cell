@@ -9,11 +9,25 @@
   --gold-deep: #b98f35;
   --ink: #f5efe2;
   --ink-dim: #b9b0d6;
-  --ink-faint: #7d74a3;
+  --ink-faint: #b7b1c8;
   --glass: rgba(255, 255, 255, 0.06);
   --glass-edge: rgba(255, 255, 255, 0.10);
   --bg-0: #0d0a22;
   --bg-1: #171236;
+  --ol-ink: var(--ink);
+  --ol-ink-dim: var(--ink-dim);
+  --ol-ink-faint: var(--ink-faint);
+  --ol-gold: var(--gold);
+  --ol-gold-soft: var(--gold-soft);
+  --ol-sheet: #171236;
+  --ol-surface: #3a3654;
+  --ol-surface-edge: #56526c;
+  --ol-bar-empty: #636078;
+  --ol-bar-fill: var(--gold);
+  --ol-toast-bg: #120e2e;
+  --ol-toast-ink: var(--ink);
+  --ol-missed: #ff8aa4;
+  --ol-day: #3a3654;
   --card: #fbf7ee;
   --card-edge: #e6dcc6;
   --spade: #1d2046;
@@ -27,9 +41,9 @@
   transform: translateX(-50%);
   padding: 11px 18px;
   border-radius: 16px;
-  background: rgba(30, 22, 72, 0.95);
-  border: 1px solid rgba(233, 196, 106, 0.35);
-  color: var(--ink);
+  background-color: var(--ol-toast-bg, #120e2e);
+  border: 1px solid var(--ol-gold, #e9c46a);
+  color: var(--ol-toast-ink, var(--ol-ink, var(--ink)));
   font-size: 14.5px;
   text-align: center;
   max-width: 88vw;
@@ -64,14 +78,16 @@
   -webkit-overflow-scrolling: touch;
   padding: 8px 18px calc(env(safe-area-inset-bottom) + 16px);
   border-radius: 30px 30px 0 0;
-  background: linear-gradient(180deg, #261d5c 0%, #17123a 40%, #120e2e 100%);
-  border-top: 1px solid rgba(233, 196, 106, 0.3);
+  background-color: var(--ol-sheet, #17123a);
+  background-image: linear-gradient(180deg, #261d5c 0%, #17123a 40%, #120e2e 100%);
+  color: var(--ol-ink, var(--ink));
+  border-top: 1px solid var(--ol-gold, #e9c46a);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
   animation: slideup 0.4s var(--ease);
 }
-.grabber { width: 42px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.22); margin: 2px auto 10px; }
+.grabber { width: 42px; height: 5px; border-radius: 3px; background: var(--ol-ink-faint, var(--ink-faint)); margin: 2px auto 10px; }
 .sheet-head { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; }
-.sheet-head h2 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 26px; color: var(--gold-soft); min-width: 190px; text-align: center; }
+.sheet-head h2 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 26px; color: var(--ol-gold-soft, var(--gold-soft)); min-width: 190px; text-align: center; }
 .sheet-close {
   display: block;
   width: 100%;
@@ -81,15 +97,16 @@
   font-weight: 600;
   font-size: 16px;
   color: #2a1f08;
-  background: linear-gradient(180deg, #f6dc98, var(--gold) 60%, #d8ad4b);
+  background-color: #e9c46a;
+  background-image: linear-gradient(180deg, #f6dc98, #e9c46a 60%, #d8ad4b);
 }
-.link-btn { display: block; margin: 16px auto 0; color: var(--gold-soft); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; padding: 8px; }
-.rules { margin: 0; padding: 0 4px 0 20px; color: var(--ink-dim); font-size: 15.5px; line-height: 1.5; }
+.link-btn { display: block; margin: 16px auto 0; color: var(--ol-gold-soft, var(--gold-soft)); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; padding: 8px; }
+.rules { margin: 0; padding: 0 4px 0 20px; color: var(--ol-ink-dim, var(--ink-dim)); font-size: 15.5px; line-height: 1.5; }
 .rules li { margin-bottom: 10px; }
-.rules b { color: var(--ink); }
+.rules b { color: var(--ol-ink, var(--ink)); }
 
-.icon-btn { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-edge); }
+.icon-btn { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background-color: var(--ol-surface, var(--glass)); border: 1px solid var(--ol-surface-edge, var(--glass-edge)); color: var(--ol-ink, var(--ink)); }
 .icon-btn.small { width: 40px; height: 40px; border-radius: 13px; }
-.icon-btn svg { width: 23px; height: 23px; fill: none; stroke: var(--gold-soft); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn svg { width: 23px; height: 23px; fill: none; stroke: var(--ol-gold-soft, var(--gold-soft)); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 .hidden { display: none !important; }

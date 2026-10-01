@@ -422,15 +422,15 @@
   padding: 12px 14px;
   border-radius: 16px;
   text-align: left;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
-  color: var(--ink);
+  background-color: var(--ol-surface, var(--glass));
+  border: 1px solid var(--ol-surface-edge, var(--glass-edge));
+  color: var(--ol-ink, var(--ink));
 }
-.look-btn > svg { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--gold-soft); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.look-btn > svg { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--ol-gold-soft, var(--gold-soft)); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .look-btn .chev { width: 18px; height: 18px; margin-left: auto; opacity: 0.7; }
 .look-text { display: flex; flex-direction: column; gap: 2px; }
-.look-text strong { font-size: 15.5px; }
-.look-text small { font-size: 12.5px; color: var(--ink-dim); }
+.look-text strong { font-size: 15.5px; color: var(--ol-ink, var(--ink)); }
+.look-text small { font-size: 12.5px; color: var(--ol-ink-dim, var(--ink-dim)); }
 
 .card-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
 .look-pick {
@@ -440,11 +440,11 @@
   padding: 11px 12px 12px;
   border-radius: 18px;
   text-align: left;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
-  color: var(--ink-dim);
+  background-color: var(--ol-surface, var(--glass));
+  border: 1px solid var(--ol-surface-edge, var(--glass-edge));
+  color: var(--ol-ink, var(--ink));
 }
-.look-pick[aria-pressed="true"] { color: var(--ink); background: rgba(255, 255, 255, 0.11); box-shadow: 0 0 0 2px var(--gold); }
+.look-pick[aria-pressed="true"] { color: var(--ol-ink, var(--ink)); background-color: var(--ol-surface, var(--glass)); box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }
 .look-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 650; letter-spacing: 0.02em; }
 .look-pick[aria-pressed="true"] .look-name::after {
   content: '\2713';
@@ -479,13 +479,13 @@
   gap: 7px;
   padding: 9px 4px 8px;
   border-radius: 14px;
-  border: 1px solid var(--glass-edge);
-  background: var(--glass);
-  color: var(--ink-dim);
+  border: 1px solid var(--ol-surface-edge, var(--glass-edge));
+  background-color: var(--ol-surface, var(--glass));
+  color: var(--ol-ink, var(--ink));
   font-size: 12.5px;
   font-weight: 650;
 }
-.finish-pick[aria-pressed="true"] { color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
+.finish-pick[aria-pressed="true"] { color: var(--ol-ink, var(--ink)); box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }
 .finish-pick .look-cards { --cw: 34px; --ch: 49px; gap: 5px; }
 
 /* ---------- Classic: the FreeCell/Golf/Bridge PNG deck, same API ---------- */
@@ -494,8 +494,44 @@
   background: url("../assets/backs/classic.svg") center / 100% 100% no-repeat;
   box-shadow: 0 0 0 1px #f6f0e4, 0 1px 2px rgba(0,0,0,.35);
 }
-[data-layout="classic"] .corner, [data-layout="classic"] .pip, [data-layout="classic"] .face-letter,
+[data-layout="classic"] .pip, [data-layout="classic"] .face-letter,
 [data-layout="classic"] .index, [data-layout="classic"] .pips, [data-layout="classic"] .bigsu { display: none; }
+/* Markup index sits in the visible strip. A white plate covers the PNG
+   letters so a short fan cannot turn J into I or Q into O. */
+[data-layout="classic"] .card.up::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 48%;
+  height: 36%;
+  background: #fff;
+  pointer-events: none;
+}
+[data-layout="classic"] .corner {
+  display: flex;
+  z-index: 2;
+  left: 2px;
+  top: 1px;
+  right: auto;
+  width: max-content;
+  max-width: calc(100% - 4px);
+  padding: 0 2px 1px;
+  background: #fff;
+  line-height: 1;
+  gap: 1px;
+}
+[data-layout="classic"] .corner .r {
+  font-size: calc(var(--cw, 40px) * 0.34);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+[data-layout="classic"] .corner .s {
+  font-size: calc(var(--cw, 40px) * 0.26);
+  margin-left: 0;
+  line-height: 1;
+}
 [data-cards="classic"] .card.up[data-suit="0"][data-rank="1"] {
   background: url("../assets/decks/classic/spades_A.png") center / 100% 100% no-repeat;
 }

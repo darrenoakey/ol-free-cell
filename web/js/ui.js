@@ -250,7 +250,10 @@ const UI = {
 
     const sampleWidth = firstRect.width || 42;
     const cardHeight = sampleWidth * (768 / 512);
-    const fanGap = Math.max(14, cardHeight * 0.22);
+    const look = this.els.board.dataset.cards
+      || (this.controller && this.controller.look && this.controller.look.cards)
+      || 'classic';
+    const fanGap = Math.max(Math.max(14, cardHeight * 0.22), OL.Cards.minStackOffset(look, cardHeight));
 
     cardEls.forEach((src, i) => {
       const clone = src.cloneNode(true);
@@ -415,7 +418,10 @@ const UI = {
     const sampleWidth = this.els.columns[0].getBoundingClientRect().width || 42;
     const cardHeight = sampleWidth * (768 / 512);
     OL.Cards.setGeometry(this.els.board, sampleWidth, cardHeight);
-    const fanGap = Math.max(14, cardHeight * 0.22);
+    const look = this.els.board.dataset.cards
+      || (this.controller && this.controller.look && this.controller.look.cards)
+      || 'classic';
+    const fanGap = Math.max(Math.max(14, cardHeight * 0.22), OL.Cards.minStackOffset(look, cardHeight));
     const maxCards = Math.max(7, ...game.cascades.map((c) => c.length));
     const columnHeight = fanGap * Math.max(0, maxCards - 1) + cardHeight + 4;
 
