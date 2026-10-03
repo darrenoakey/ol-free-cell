@@ -204,49 +204,63 @@ check_steps() {
         return $rc
     }
 
-    # The gate's own simulator, created and booted in the background while the
-    # web/core steps run, so bootstatus overlaps them instead of serializing.
-    SIM_NAME="ol-free-cell-gate"
-    SIM_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
-    SIM_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-0"
-    SIM_UDID_FILE="$(mktemp -t ol-free-cell-sim-udid)"
-    (
-        SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-        if [[ -z "$SIM_UDID" ]]; then
-            xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
-                echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
-                exit 1
-            }
-            xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
-            SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-        fi
-        if [[ -z "$SIM_UDID" ]]; then
-            echo "ERROR: could not create the $SIM_NAME simulator" >&2
-            exit 1
-        fi
-        xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
-        xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
+    # Suites follow the candidate diff. Unknown files fail closed to every
+    # suite. A version bump still goes through the App Store preflight.
+    if ! SUITES="$(node "$SCRIPT_DIR/scripts/check-impact.mjs" "$SCRIPT_DIR")"; then
+        echo "ERROR: check-impact failed; running the full suite" >&2
+        SUITES=$'verify-core\nunit-tests\nnpm-audit\nbdd-web\ncap-sync\nios-test\nresolve-packages'
+    fi
+    need() { printf '%s\n' "$SUITES" | grep -qx "$1"; }
+    skip() {
+        echo "[check-timing] $1: skipped, change impact (total $((SECONDS - CHECK_T0))s)" >&2
+    }
 
-        # simctl terminate can wedge CoreSimulator for minutes. It is cleanup
-        # only, so abandon it after a few seconds instead of holding the gate.
-        bounded_terminate() {
-            xcrun simctl terminate "$1" "$2" >/dev/null 2>&1 &
-            local pid=$! i=0
-            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 8 ]; do
-                sleep 1
-                i=$((i + 1))
-            done
-            if kill -0 "$pid" 2>/dev/null; then
-                kill "$pid" 2>/dev/null || true
-                wait "$pid" 2>/dev/null || true
+    mkdir -p "$SCRIPT_DIR/local"
+    BDD_WEB_PID=""
+    if need bdd-web; then
+        BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
+        npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
+        BDD_WEB_PID=$!
+    fi
+
+    # Boot the gate simulator while the cheap steps run. Do not simctl
+    # terminate SpringBoard: abandoning that terminate leaves the simulator
+    # rebooting, and xcodebuild then waits ~180s before the test runner starts.
+    SIM_SETUP_PID=""
+    SIM_READY_FILE=""
+    if need ios-test; then
+        SIM_NAME="ol-free-cell-gate"
+        SIM_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+        SIM_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-0"
+        SIM_UDID_CACHE="$SCRIPT_DIR/local/gate-simulator-udid"
+        SIM_READY_FILE="$(mktemp -t ol-free-cell-sim-ready)"
+        (
+            SIM_UDID=""
+            if [[ -s "$SIM_UDID_CACHE" ]]; then
+                SIM_UDID="$(tr -d '[:space:]' < "$SIM_UDID_CACHE")"
             fi
-        }
-        bounded_terminate "$SIM_UDID" com.darrenoakey.olGolf
-        bounded_terminate "$SIM_UDID" com.darrenoakey.olFreeCell
-        bounded_terminate "$SIM_UDID" com.apple.springboard
-        printf '%s\n' "$SIM_UDID" > "$SIM_UDID_FILE"
-    ) &
-    SIM_SETUP_PID=$!
+            if [[ -z "$SIM_UDID" ]]; then
+                SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
+                if [[ -z "$SIM_UDID" ]]; then
+                    xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
+                        echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
+                        exit 1
+                    }
+                    xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
+                    SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
+                fi
+                if [[ -z "$SIM_UDID" ]]; then
+                    echo "ERROR: could not create the $SIM_NAME simulator" >&2
+                    exit 1
+                fi
+                printf '%s\n' "$SIM_UDID" > "$SIM_UDID_CACHE"
+            fi
+            xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
+            xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
+            printf '%s\n' "$SIM_UDID" > "$SIM_READY_FILE"
+        ) &
+        SIM_SETUP_PID=$!
+    fi
 
     step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web"
     step unit-tests node --test tests/unit/
@@ -261,50 +275,65 @@ check_steps() {
     fi
     step npm-audit npm audit
 
-    # The BDD web suite (chromium + node file server) shares no state with the
-    # native build (xcodebuild + simulator), so it runs concurrently and its
-    # result is reaped — and enforced — after the UI test.
-    mkdir -p "$SCRIPT_DIR/local"
-    BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
-    npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
-    BDD_WEB_PID=$!
-
-    step cap-sync npx --no-install cap sync ios
-
-    # simctl list/bootstatus can wedge for the whole check deadline. Setup is
-    # already running in the background; abandon it instead of holding the gate.
-    i=0
-    while kill -0 "$SIM_SETUP_PID" 2>/dev/null && [ "$i" -lt 90 ]; do
-        sleep 1
-        i=$((i + 1))
-    done
-    if kill -0 "$SIM_SETUP_PID" 2>/dev/null; then
-        echo "ERROR: simulator setup exceeded 90s" >&2
-        pkill -TERM -P "$SIM_SETUP_PID" 2>/dev/null || true
-        kill "$SIM_SETUP_PID" 2>/dev/null || true
-        exit 1
+    if need cap-sync; then
+        step cap-sync npx --no-install cap sync ios
+    else
+        skip cap-sync
     fi
-    wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
-    SIM_UDID="$(cat "$SIM_UDID_FILE")"
-    rm -f "$SIM_UDID_FILE"
 
-    step ios-test xcodebuild \
-        -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
-        -scheme App \
-        -configuration Release \
-        -destination "platform=iOS Simulator,id=$SIM_UDID" \
-        -derivedDataPath "$CHECK_DERIVED_DATA" \
-        CODE_SIGNING_ALLOWED=NO \
-        EXCLUDED_ARCHS=x86_64 \
-        -parallel-testing-enabled NO \
-        -only-testing:AppUITests \
-        test
-    wait "$BDD_WEB_PID" || {
-        echo "ERROR: bdd-web failed; last output:" >&2
-        tail -n 40 "$BDD_WEB_LOG" >&2
-        exit 1
-    }
-    echo "[check-timing] bdd-web: done (see $BDD_WEB_LOG) (total $((SECONDS - CHECK_T0))s)" >&2
+    if need ios-test; then
+        # simctl list/bootstatus can wedge. Setup is already in the background;
+        # abandon it instead of holding the gate for the whole check deadline.
+        i=0
+        while kill -0 "$SIM_SETUP_PID" 2>/dev/null && [ "$i" -lt 45 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+        if kill -0 "$SIM_SETUP_PID" 2>/dev/null; then
+            echo "ERROR: simulator setup exceeded 45s" >&2
+            pkill -TERM -P "$SIM_SETUP_PID" 2>/dev/null || true
+            kill "$SIM_SETUP_PID" 2>/dev/null || true
+            exit 1
+        fi
+        wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
+        SIM_UDID="$(cat "$SIM_READY_FILE")"
+        rm -f "$SIM_READY_FILE"
+
+        # Warm checkouts skip SPM resolution. Resolving capacitor-swift-pm on
+        # every release is the ~100s before an incremental test build.
+        XCODE_PKG_ARG=""
+        if ! need resolve-packages && [[ -d "$CHECK_DERIVED_DATA/SourcePackages/checkouts" ]]; then
+            XCODE_PKG_ARG="-disableAutomaticPackageResolution"
+        fi
+        step ios-test xcodebuild \
+            -project "$SCRIPT_DIR/ios/App/App.xcodeproj" \
+            -scheme App \
+            -configuration Release \
+            -destination "platform=iOS Simulator,id=$SIM_UDID" \
+            -derivedDataPath "$CHECK_DERIVED_DATA" \
+            ${XCODE_PKG_ARG:+$XCODE_PKG_ARG} \
+            CODE_SIGNING_ALLOWED=NO \
+            EXCLUDED_ARCHS=x86_64 \
+            DEBUG_INFORMATION_FORMAT=dwarf \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            ENABLE_PREVIEWS=NO \
+            -parallel-testing-enabled NO \
+            -only-testing:AppUITests \
+            test
+    else
+        skip ios-test
+    fi
+
+    if [[ -n "$BDD_WEB_PID" ]]; then
+        wait "$BDD_WEB_PID" || {
+            echo "ERROR: bdd-web failed; last output:" >&2
+            tail -n 40 "$BDD_WEB_LOG" >&2
+            exit 1
+        }
+        echo "[check-timing] bdd-web: done (see $BDD_WEB_LOG) (total $((SECONDS - CHECK_T0))s)" >&2
+    else
+        skip bdd-web
+    fi
 }
 
 check_with_deadline() {
