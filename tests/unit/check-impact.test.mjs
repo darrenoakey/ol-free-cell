@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { requiredSuites } from "../../scripts/check-impact.mjs";
@@ -68,4 +69,11 @@ test("an unclassified file fails closed to the full suite", () => {
 
 test("an empty diff fails closed", () => {
   assert.ok(requiredSuites([]).includes("ios-test"));
+});
+
+test("a wedged simulator is abandoned with killpg, not pkill", () => {
+  const run = readFileSync(new URL("../../run", import.meta.url), "utf8");
+  assert.equal(run.includes("pkill"), false);
+  assert.ok(run.includes("os.killpg"));
+  assert.ok(run.includes("abandon_session"));
 });

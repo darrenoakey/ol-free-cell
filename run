@@ -234,31 +234,9 @@ check_steps() {
         SIM_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-0"
         SIM_UDID_CACHE="$SCRIPT_DIR/local/gate-simulator-udid"
         SIM_READY_FILE="$(mktemp -t ol-free-cell-sim-ready)"
-        (
-            SIM_UDID=""
-            if [[ -s "$SIM_UDID_CACHE" ]]; then
-                SIM_UDID="$(tr -d '[:space:]' < "$SIM_UDID_CACHE")"
-            fi
-            if [[ -z "$SIM_UDID" ]]; then
-                SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-                if [[ -z "$SIM_UDID" ]]; then
-                    xcrun simctl list runtimes available | grep -Fq -- "$SIM_RUNTIME" || {
-                        echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
-                        exit 1
-                    }
-                    xcrun simctl create "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" >/dev/null
-                    SIM_UDID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIM_NAME" '$0 ~ ("^[[:space:]]*" name " \\(") { print $2; exit }')"
-                fi
-                if [[ -z "$SIM_UDID" ]]; then
-                    echo "ERROR: could not create the $SIM_NAME simulator" >&2
-                    exit 1
-                fi
-                printf '%s\n' "$SIM_UDID" > "$SIM_UDID_CACHE"
-            fi
-            xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
-            xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null
-            printf '%s\n' "$SIM_UDID" > "$SIM_READY_FILE"
-        ) &
+        # Own session: a wedged simctl is killpg'd without signaling this check.
+        /usr/bin/python3 -c 'import os,sys; os.setsid(); os.execv(sys.argv[1], sys.argv[1:])' \
+            "$SCRIPT_DIR/run" __sim_setup "$SIM_READY_FILE" "$SIM_UDID_CACHE" "$SIM_NAME" "$SIM_TYPE" "$SIM_RUNTIME" &
         SIM_SETUP_PID=$!
     fi
 
@@ -291,8 +269,9 @@ check_steps() {
         done
         if kill -0 "$SIM_SETUP_PID" 2>/dev/null; then
             echo "ERROR: simulator setup exceeded 45s" >&2
-            pkill -TERM -P "$SIM_SETUP_PID" 2>/dev/null || true
-            kill "$SIM_SETUP_PID" 2>/dev/null || true
+            # Waiting on a wedged simctl held the gate lock for minutes
+            # (412s of queue). SIGKILL the session and do not wait for it.
+            abandon_session "$SIM_SETUP_PID"
             exit 1
         fi
         wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
@@ -359,12 +338,57 @@ raise SystemExit(result)
 PY
 }
 
+abandon_session() {
+    /usr/bin/python3 -c 'import os,signal,sys
+pid=int(sys.argv[1])
+for kill in (lambda: os.killpg(pid, signal.SIGKILL), lambda: os.kill(pid, signal.SIGKILL)):
+    try:
+        kill()
+    except OSError:
+        pass' "$1" &
+    local py=$! i=0
+    while kill -0 "$py" 2>/dev/null && [ "$i" -lt 2 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    kill -9 "$py" 2>/dev/null || true
+}
+
+sim_setup_session() {
+    local ready_file="$1" cache="$2" name="$3" sim_type="$4" runtime="$5" udid=""
+    if [[ -s "$cache" ]]; then
+        udid="$(tr -d '[:space:]' < "$cache")"
+    fi
+    if [[ -z "$udid" ]]; then
+        udid="$(xcrun simctl list devices available | awk -F '[()]' -v sim_name="$name" '$0 ~ ("^[[:space:]]*" sim_name " \\(") { print $2; exit }')"
+        if [[ -z "$udid" ]]; then
+            xcrun simctl list runtimes available | grep -Fq -- "$runtime" || {
+                echo "ERROR: required iOS 18.0 simulator runtime is unavailable" >&2
+                exit 1
+            }
+            xcrun simctl create "$name" "$sim_type" "$runtime" >/dev/null
+            udid="$(xcrun simctl list devices available | awk -F '[()]' -v sim_name="$name" '$0 ~ ("^[[:space:]]*" sim_name " \\(") { print $2; exit }')"
+        fi
+        if [[ -z "$udid" ]]; then
+            echo "ERROR: could not create the $name simulator" >&2
+            exit 1
+        fi
+        printf '%s\n' "$udid" > "$cache"
+    fi
+    xcrun simctl boot "$udid" >/dev/null 2>&1 || true
+    xcrun simctl bootstatus "$udid" -b >/dev/null
+    printf '%s\n' "$udid" > "$ready_file"
+}
+
 case "${1:-help}" in
     check)
         check_with_deadline
         ;;
     __check_steps)
         check_steps
+        ;;
+    __sim_setup)
+        sim_setup_session "$2" "$3" "$4" "$5" "$6"
         ;;
     bootstrap-release-gate)
         bootstrap_release_gate
