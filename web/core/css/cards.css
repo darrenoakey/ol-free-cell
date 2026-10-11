@@ -431,36 +431,52 @@
 [data-layout="solo"] .card.up .corner,
 [data-layout="solo"] .card.up .pip,
 [data-layout="solo"] .card.up .face-letter { display: none; }
+/* Tight to the corners: the rank sits hard in the top-left, the suit hard in the
+   top-right, and the big suit sits on the bottom edge. Glyph boxes carry their own
+   padding (the suit path starts 1.6/24 in), so the boxes overhang the edges. */
+[data-cards="solitaire"] .card { border-radius: calc(var(--cw) * 0.045); }
 [data-layout="solo"] .card.up .index {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  left: calc(var(--cw) * 0.07);
-  right: calc(var(--cw) * 0.05);
-  top: calc(var(--cw) * 0.04);
+  display: block;
+  inset: 0 0 auto 0;
+  height: calc(var(--cw) * 0.62);
   line-height: 1;
   font-family: 'Helvetica Neue', Helvetica, Arial, var(--sans, sans-serif);
   font-weight: 400;
 }
-[data-layout="solo"] .index b { font-weight: 400; font-size: calc(var(--cw) * 0.56); letter-spacing: -0.03em; }
-[data-layout="solo"] .card[data-rank="10"] .index b { letter-spacing: -0.12em; margin-left: calc(var(--cw) * -0.03); }
-[data-layout="solo"] .index .su { width: calc(var(--cw) * 0.36); height: calc(var(--cw) * 0.36); margin: calc(var(--cw) * 0.07) 0 0; }
+[data-layout="solo"] .index b {
+  position: absolute;
+  left: calc(var(--cw) * 0.035);
+  top: calc(var(--cw) * -0.05);
+  font-weight: 400;
+  font-size: calc(var(--cw) * 0.64);
+  letter-spacing: -0.03em;
+}
+[data-layout="solo"] .card[data-rank="10"] .index b { left: calc(var(--cw) * 0.0); font-size: calc(var(--cw) * 0.50); letter-spacing: -0.13em; top: calc(var(--cw) * -0.01); }
+[data-layout="solo"] .index .su {
+  position: absolute;
+  right: calc(var(--cw) * -0.035);
+  top: calc(var(--cw) * 0.0);
+  width: calc(var(--cw) * 0.46);
+  height: calc(var(--cw) * 0.46);
+  margin: 0;
+}
+/* Every number card, ace included, wears the same big suit, standing on the bottom edge. */
 [data-layout="solo"] .card.up:not(.court) .bigsu {
   display: block;
   position: absolute;
   left: 50%;
-  top: calc(var(--ch) * 0.685);
-  width: calc(var(--cw) * 0.92);
-  height: calc(var(--cw) * 0.92);
-  transform: translate(-50%, -50%);
+  bottom: calc(var(--cw) * -0.03);
+  width: calc(var(--cw) * 1.0);
+  height: calc(var(--cw) * 1.0);
+  margin: 0;
+  transform: translateX(-50%);
   pointer-events: none;
 }
 .court-art.tall {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(var(--ch) * 0.645);
+  height: calc(var(--ch) * 0.64);
   background-size: cover;
   background-position: center top;
 }
@@ -910,3 +926,7 @@
   color: var(--ol-ink, var(--ink));
 }
 .back-pick[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ol-gold, var(--gold)); }
+
+/* OL.Deal: a card in flight is driven only by its translate/scale animation.
+   The app's own transform transition would replay the move a second time. */
+.card.ol-in-flight { transition: none !important; animation: none !important; will-change: translate, scale; }

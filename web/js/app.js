@@ -158,6 +158,7 @@ const App = {
   },
 
   async enterDaily(dateStr) {
+    OL.Deal.settle();
     const today = Prng.todayDateString();
     this.context = { mode: 'daily', date: dateStr, isToday: dateStr === today };
     UI.setMode('daily');
@@ -189,15 +190,15 @@ const App = {
     }
 
     UI.setLoading(false);
-    UI.render(this.game, this.stats, this.context);
+    await UI.dealIn(this.game, this.stats, this.context, animateDeal);
     if (existing) {
       const suffix = existing.solved ? ' \u00b7 Cleared \u2713' : ' \u00b7 Stuck';
       UI.els.dateLabel.textContent += suffix;
     }
-    if (animateDeal) UI.animateDealIn(this.game);
   },
 
   async enterPractice(seed) {
+    OL.Deal.settle();
     this.context = { mode: 'practice', date: null, isToday: false };
     UI.setMode('practice');
     UI.setLoading(true, 'Shuffling a practice round\u2026');
@@ -216,12 +217,11 @@ const App = {
     this.restarts = 0;
 
     UI.setLoading(false);
-    UI.render(this.game, this.stats, this.context);
-    UI.animateDealIn(this.game);
+    await UI.dealIn(this.game, this.stats, this.context);
   },
 
   canInteract() {
-    return !!(this.game && this.game.status === 'playing');
+    return !!(this.game && this.game.status === 'playing' && !OL.Deal.busy());
   },
 
   beginDragCascade(col, count) {
@@ -278,6 +278,7 @@ const App = {
   },
 
   async onUndo() {
+    OL.Deal.settle();
     if (!this.game || !this.game.undo()) return;
     this.undos++;
     UI.render(this.game, this.stats, this.context);
@@ -299,6 +300,7 @@ const App = {
   },
 
   async onNewGameRequested() {
+    OL.Deal.settle();
     if (this.context.mode === 'practice') {
       await this.enterPractice();
       return;

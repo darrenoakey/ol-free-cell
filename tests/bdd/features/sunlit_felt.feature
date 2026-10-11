@@ -7,6 +7,11 @@ Feature: Sunlit felt FreeCell presentation
     And all 52 cards are dealt across eight tableau columns
     And the gameplay controls retain their accessible names
 
+  Scenario: Fresh cards deal one at a time from the bottom centre
+    Given I launch OL FreeCell at the root
+    Then the fresh deal starts at the bottom centre and lands one card at a time
+    And the table background layers the shared felt SVG
+
   Scenario: Show the emerald sunlit felt theme
     Given I launch OL FreeCell at the root
     Then the emerald theme uses the sunlit felt palette

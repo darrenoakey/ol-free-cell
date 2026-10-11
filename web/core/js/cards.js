@@ -268,8 +268,8 @@
    * jack's hook; a ten ends higher). The fan must keep that strip visible.
    */
   const CLASSIC_INDEX_BOTTOM = 240 / 768;
-  /** Solitaire's index: 0.04 of the width down, then a rank 0.56 of the width tall (cards.css). */
-  const SOLO_INDEX_BOTTOM = 0.04 + 0.56;
+  /** Solitaire's rank line box: 0.05 of the width above the top edge, 0.64 of the width tall (cards.css). */
+  const SOLO_INDEX_BOTTOM = -0.05 + 0.64;
 
   /** Where the index ends, in px, for one arrangement at a given card width. */
   function indexBottom(layout, cw, ch) {

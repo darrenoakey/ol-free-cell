@@ -22,6 +22,13 @@ html[data-theme="twilight"], html[data-ol-theme="twilight"] {
   --ol-toast-bg: #120e2e; --ol-toast-ink: #f5efe2; --ol-missed: #ff8aa4; --ol-day: #3a3654;
 }
 
+/* Felt: a fine, subtle cloth grain that sits over every table gradient.
+   Hosts that paint their own table put var(--ol-felt) first in their
+   background-image list. Parchment keeps its own paper texture. */
+:root, html[data-theme], html[data-ol-theme] {
+  --ol-felt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.6 1.05'/%3E%3C/filter%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.7 -.85'/%3E%3C/filter%3E%3Cfilter id='m' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.2 .7'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23m)' opacity='.05'/%3E%3Crect width='320' height='320' filter='url(%23f)' opacity='.10'/%3E%3Crect width='320' height='320' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
+}
+
 /* ---------- table themes ---------- */
 /* Table colour and card look are independent: the card looks live in cards.css. */
 html[data-theme="classic"], html[data-ol-theme="classic"] {
@@ -36,8 +43,7 @@ html[data-theme="classic"], html[data-ol-theme="classic"] {
 }
 html[data-theme="classic"] body, html[data-ol-theme="classic"] body {
   background-color: var(--ol-sheet);
-  background-image:
-    radial-gradient(80% 40% at 50% -10%, rgba(255, 255, 255, 0.10), transparent 55%),
+  background-image: var(--ol-felt), radial-gradient(80% 40% at 50% -10%, rgba(255, 255, 255, 0.10), transparent 55%),
     radial-gradient(70% 40% at 100% 100%, rgba(0, 0, 0, 0.28), transparent 70%),
     linear-gradient(180deg, #1a7a48 0%, #0e5a34 48%, #0a3d24 100%);
 }
@@ -60,8 +66,7 @@ html[data-theme="casino"], html[data-ol-theme="casino"] {
 }
 html[data-theme="casino"] body, html[data-ol-theme="casino"] body {
   background-color: var(--ol-sheet);
-  background-image:
-    radial-gradient(80% 40% at 50% -10%, rgba(180, 210, 255, 0.10), transparent 55%),
+  background-image: var(--ol-felt), radial-gradient(80% 40% at 50% -10%, rgba(180, 210, 255, 0.10), transparent 55%),
     linear-gradient(180deg, #16344e 0%, #0c2236 46%, #061018 100%);
 }
 html[data-theme="casino"] body::before, html[data-ol-theme="casino"] body::before { opacity: 0; }
@@ -83,8 +88,7 @@ html[data-theme="parlor"], html[data-ol-theme="parlor"] {
 }
 html[data-theme="parlor"] body, html[data-ol-theme="parlor"] body {
   background-color: var(--ol-sheet);
-  background-image:
-    radial-gradient(80% 40% at 50% -8%, rgba(255, 220, 180, 0.12), transparent 55%),
+  background-image: var(--ol-felt), radial-gradient(80% 40% at 50% -8%, rgba(255, 220, 180, 0.12), transparent 55%),
     linear-gradient(180deg, #6a2438 0%, #4a1526 46%, #2a0c16 100%);
 }
 html[data-theme="parlor"] body::before, html[data-ol-theme="parlor"] body::before { opacity: 0; }
@@ -149,7 +153,7 @@ html[data-theme="emerald"], html[data-ol-theme="emerald"] {
 }
 html[data-theme="emerald"] body, html[data-ol-theme="emerald"] body {
   background-color: var(--ol-sheet);
-  background-image: linear-gradient(180deg, #177a51 0%, #0b563a 48%, #063a27 100%);
+  background-image: var(--ol-felt), linear-gradient(180deg, #177a51 0%, #0b563a 48%, #063a27 100%);
 }
 html[data-theme="emerald"] body::before, html[data-ol-theme="emerald"] body::before { opacity: 0; }
 html[data-theme="emerald"] .sheet-panel, html[data-ol-theme="emerald"] .sheet-panel {
@@ -170,7 +174,7 @@ html[data-theme="midnight"], html[data-ol-theme="midnight"] {
 }
 html[data-theme="midnight"] body, html[data-ol-theme="midnight"] body {
   background-color: var(--ol-sheet);
-  background-image: linear-gradient(180deg, #2d6469 0%, #1b4652 48%, #12323d 100%);
+  background-image: var(--ol-felt), linear-gradient(180deg, #2d6469 0%, #1b4652 48%, #12323d 100%);
 }
 html[data-theme="midnight"] body::before, html[data-ol-theme="midnight"] body::before { opacity: 0; }
 html[data-theme="midnight"] .sheet-panel, html[data-ol-theme="midnight"] .sheet-panel {
@@ -191,7 +195,7 @@ html[data-theme="front-nine"], html[data-ol-theme="front-nine"] {
 }
 html[data-theme="front-nine"] body, html[data-ol-theme="front-nine"] body {
   background-color: var(--ol-sheet);
-  background-image: linear-gradient(180deg, #9fd3ec 0%, #e6f4ea 42%, #58af74 100%);
+  background-image: var(--ol-felt), linear-gradient(180deg, #9fd3ec 0%, #e6f4ea 42%, #58af74 100%);
 }
 html[data-theme="front-nine"] body::before, html[data-ol-theme="front-nine"] body::before { opacity: 0; }
 html[data-theme="front-nine"] .sheet-panel, html[data-ol-theme="front-nine"] .sheet-panel {
@@ -212,7 +216,7 @@ html[data-theme="back-nine"], html[data-ol-theme="back-nine"] {
 }
 html[data-theme="back-nine"] body, html[data-ol-theme="back-nine"] body {
   background-color: var(--ol-sheet);
-  background-image: linear-gradient(180deg, #2f3a63 0%, #1e4d36 46%, #123425 100%);
+  background-image: var(--ol-felt), linear-gradient(180deg, #2f3a63 0%, #1e4d36 46%, #123425 100%);
 }
 html[data-theme="back-nine"] body::before, html[data-ol-theme="back-nine"] body::before { opacity: 0; }
 html[data-theme="back-nine"] .sheet-panel, html[data-ol-theme="back-nine"] .sheet-panel {
@@ -257,7 +261,7 @@ html[data-theme="bridge"], html[data-ol-theme="bridge"] {
 }
 html[data-theme="bridge"] body, html[data-ol-theme="bridge"] body {
   background-color: var(--ol-sheet);
-  background-image: linear-gradient(180deg, #14924f 0%, #0e6b3a 55%, #0a4e2a 100%);
+  background-image: var(--ol-felt), linear-gradient(180deg, #14924f 0%, #0e6b3a 55%, #0a4e2a 100%);
 }
 html[data-theme="bridge"] body::before, html[data-ol-theme="bridge"] body::before { opacity: 0; }
 html[data-theme="bridge"] .sheet-panel, html[data-ol-theme="bridge"] .sheet-panel {

@@ -45,6 +45,57 @@ Then('the gameplay controls retain their accessible names', async function () {
   }
 });
 
+Then('the fresh deal starts at the bottom centre and lands one card at a time', async function () {
+  await this.page.getByRole('button', { name: 'New game', exact: true }).click();
+  const observation = await this.page.evaluate(() => new Promise((resolve) => {
+    let first = null;
+    const landed = [];
+    let frames = 0;
+    const sample = () => {
+      const board = document.querySelector('#board');
+      const cards = Array.from(document.querySelectorAll('#tableau .card'));
+      const flying = cards.filter((card) => card.classList.contains('ol-in-flight'));
+      if (!first && cards.length === 52 && flying.length === 52) {
+        const boardRect = board.getBoundingClientRect();
+        first = {
+          board: { x: boardRect.left + boardRect.width / 2, bottom: Math.min(boardRect.bottom, innerHeight) },
+          cards: cards.map((card) => {
+            const rect = card.getBoundingClientRect();
+            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          }),
+        };
+      }
+      if (first) landed.push(cards.length - flying.length);
+      if (first && !OL.Deal.busy()) return resolve({ first, landed, frames });
+      if (++frames > 500) return resolve({ first, landed, frames, timedOut: true });
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }));
+  assert.ok(!observation.timedOut, 'deal should finish while sampled by requestAnimationFrame');
+  assert.ok(observation.first, 'all cards should begin in flight before any lands');
+  assert.equal(observation.first.cards.length, 52);
+  for (const card of observation.first.cards) {
+    assert.ok(Math.abs(card.x - observation.first.board.x) < 2, `start x ${card.x} should be board centre ${observation.first.board.x}`);
+    assert.ok(card.y >= observation.first.board.bottom, `start y ${card.y} should be at the bottom edge ${observation.first.board.bottom}`);
+  }
+  assert.ok(observation.landed.some((count) => count > 0 && count < 52), 'cards should land incrementally rather than all at once');
+});
+
+Then('the table background layers the shared felt SVG', async function () {
+  const felt = await css(this.page, 'body', '--ol-felt');
+  assert.match(felt, /^url\(/, 'core should supply the felt SVG token');
+  const usesFeltLayer = await this.page.evaluate(() => Array.from(document.styleSheets).some((sheet) => {
+    try {
+      return Array.from(sheet.cssRules).some((rule) =>
+        rule.selectorText?.includes('body.theme-emerald') && rule.style.backgroundImage.includes('var(--ol-felt)'));
+    } catch (_) {
+      return false;
+    }
+  }));
+  assert.equal(usesFeltLayer, true, 'FreeCell board background should layer the shared felt SVG');
+});
+
 Then('the emerald theme uses the sunlit felt palette', async function () {
   assert.equal(await css(this.page, 'body', '--text'), tokens.cream);
   assert.equal(await css(this.page, 'body', '--text-dim'), tokens.secondary);

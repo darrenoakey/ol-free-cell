@@ -496,6 +496,8 @@ const UI = {
   render(game, stats, context) {
     // Never stomp the board mid-drag — the ghost owns the visual.
     if (this._drag) return;
+    // Resize/look/undo renders land any active deal before rebuilding the DOM.
+    if (OL.Deal.busy()) OL.Deal.settle();
     this.renderTopStrip(game, stats, context);
     this.renderCascades(game);
     this.renderSlots(game);
@@ -525,32 +527,6 @@ const UI = {
     el.classList.add('shake');
   },
 
-  _positionFixed(el, rect) {
-    el.style.position = 'fixed';
-    el.style.left = `${rect.left}px`;
-    el.style.top = `${rect.top}px`;
-    el.style.width = `${rect.width}px`;
-    el.style.height = `${rect.height}px`;
-    el.style.margin = '0';
-  },
-
-  flyCard(card, fromRect, toEl) {
-    if (!fromRect || !toEl) return;
-    const destRect = this.rectOf(toEl);
-    const img = this.cardFrontEl(card);
-    img.classList.add('flying-card');
-    this._positionFixed(img, fromRect);
-    this.els.board.appendChild(img);
-    requestAnimationFrame(() => {
-      img.style.transition = 'transform .28s cubic-bezier(.22,.85,.35,1)';
-      const dx = destRect.left + destRect.width / 2 - (fromRect.left + fromRect.width / 2);
-      const dy = destRect.top + destRect.height / 2 - (fromRect.top + fromRect.height / 2);
-      const scale = destRect.width / Math.max(1, fromRect.width);
-      img.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
-    });
-    img.addEventListener('transitionend', () => img.remove(), { once: true });
-  },
-
   cascadeTopEl(col) {
     return this.els.columns[col].lastElementChild;
   },
@@ -563,42 +539,16 @@ const UI = {
     return this.els.foundations[i];
   },
 
-  animateDealIn(game) {
-    const originEl = this.els.freecells[0] || this.els.columns[0];
-    const origin = this.rectOf(originEl);
-    let delay = 0;
-    for (let col = 0; col < 8; col++) {
-      const cards = game.cascades[col];
-      for (let row = 0; row < cards.length; row++) {
-        const colEl = this.els.columns[col];
-        const cardEl = colEl.children[row];
-        if (!cardEl) continue;
-        const destRect = this.rectOf(cardEl);
-        cardEl.style.visibility = 'hidden';
-        const clone = this.cardFrontEl(cards[row]);
-        clone.classList.add('flying-card');
-        this._positionFixed(clone, origin);
-        clone.style.opacity = '0.001';
-        this.els.board.appendChild(clone);
-        const d = delay;
-        setTimeout(() => {
-          clone.style.opacity = '1';
-          clone.style.transition = 'transform .34s cubic-bezier(.22,.85,.35,1)';
-          const dx = destRect.left - origin.left;
-          const dy = destRect.top - origin.top;
-          clone.style.transform = `translate(${dx}px, ${dy}px)`;
-          clone.addEventListener(
-            'transitionend',
-            () => {
-              clone.remove();
-              cardEl.style.visibility = 'visible';
-            },
-            { once: true },
-          );
-        }, d);
-        delay += 18;
-      }
-    }
+  /** Render a new layout and immediately move its cards to the hidden deal origin.
+   * No browser frame can paint the final layout before OL.Deal holds every card at
+   * the bottom-centre source, then lands them in the exact FreeCell deal order. */
+  async dealIn(game, stats, context, animate = true) {
+    OL.Deal.settle();
+    this.render(game, stats, context);
+    if (!animate) return;
+    const cards = this.els.columns.flatMap((column) => Array.from(column.children));
+    const flights = OL.Deal.prepare(cards, { from: 'bottom', board: this.els.board, flip: 'flight' });
+    await OL.Deal.play(flights);
   },
 
   highlightHint(move) {
