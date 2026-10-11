@@ -49,6 +49,12 @@ Then('the card look is {string}', async function (look) {
   assert.equal(await this.page.locator('#board').getAttribute('data-cards'), look);
 });
 
+Then('the board uses the {string} cards and {string} back', async function (cards, back) {
+  const board = this.page.locator('#board');
+  assert.equal(await board.getAttribute('data-cards'), cards);
+  assert.equal(await board.getAttribute('data-back'), back);
+});
+
 Then('the appearance sheet has the tabs Table, Look, Numbers, Faces, Back and Finish', async function () {
   assert.deepEqual(await this.page.locator('#sheet-look .look-tab').allInnerTexts(), [
     'Table', 'Look', 'Numbers', 'Faces', 'Back', 'Finish',

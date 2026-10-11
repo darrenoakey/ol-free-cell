@@ -217,11 +217,6 @@ check_steps() {
 
     mkdir -p "$SCRIPT_DIR/local"
     BDD_WEB_PID=""
-    if need bdd-web; then
-        BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
-        npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
-        BDD_WEB_PID=$!
-    fi
 
     # Boot the gate simulator while the cheap steps run. Do not simctl
     # terminate SpringBoard: abandoning that terminate leaves the simulator
@@ -252,6 +247,15 @@ check_steps() {
         echo "[check-timing] npm-ci: skipped, node_modules matches package-lock.json (total $((SECONDS - CHECK_T0))s)" >&2
     fi
     step npm-audit npm audit
+
+    # A freshly created gate worktree has no cucumber binary. Start browser BDD
+    # only after the lockfile-compatible dependencies are installed, then let it
+    # overlap the remaining Capacitor and native checks.
+    if need bdd-web; then
+        BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
+        npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
+        BDD_WEB_PID=$!
+    fi
 
     if need cap-sync; then
         step cap-sync npx --no-install cap sync ios

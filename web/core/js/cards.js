@@ -23,6 +23,7 @@
 
   /** Every look. `layout` picks the face arrangement, `id` picks the colours and back. */
   const STYLES = [
+    { id: 'solitaire', name: 'Solitaire', layout: 'solo', court: 'tall', back: 'solitaire' },
     { id: 'original', name: 'Original', layout: 'modern' },
     { id: 'straight', name: 'Straight', layout: 'modern' },
     { id: 'clear', name: 'Clear', layout: 'modern' },
@@ -103,6 +104,7 @@
     { id: 'medallion-blue', name: 'Medallion Blue', file: 'medallion-blue.webp', sources: ['ol-core'] },
     { id: 'lattice-red', name: 'Lattice Red', file: 'lattice-red.webp', sources: ['ol-core'] },
     { id: 'lattice-blue', name: 'Lattice Blue', file: 'lattice-blue.webp', sources: ['ol-core'] },
+    { id: 'solitaire', name: 'Solitaire Red', file: 'solitaire.svg', sources: ['ol-core'] },
   ];
   const BACK_BY_ID = Object.fromEntries(BACKS.map((b) => [b.id, b]));
 
@@ -162,6 +164,7 @@
   //   bust    one head-and-torso cameo in a round frame
   //   cut     one larger figure whose torso runs off the bottom edge
   //   close   zoomed in: the face sits in the bottom-right corner and its right edge is cropped
+  //   tall    the English-pattern figure (core/assets/courts/english) across the bottom two thirds
   // cards.css paints the picture; the markup below only provides the windows.
 
   function defsMarkup() {
@@ -186,7 +189,8 @@
         '<div class="court-art double"><i></i><i></i></div>' +
         '<div class="court-art bust"></div>' +
         '<div class="court-art cut"></div>' +
-        '<div class="court-art close"></div>';
+        '<div class="court-art close"></div>' +
+        '<div class="court-art tall"></div>';
     } else {
       const { size, spots } = PIPS[card.rank];
       const pips = spots.map(([x, y]) =>
@@ -264,12 +268,15 @@
    * jack's hook; a ten ends higher). The fan must keep that strip visible.
    */
   const CLASSIC_INDEX_BOTTOM = 240 / 768;
+  /** Solitaire's index: 0.04 of the width down, then a rank 0.56 of the width tall (cards.css). */
+  const SOLO_INDEX_BOTTOM = 0.04 + 0.56;
 
   /** Where the index ends, in px, for one arrangement at a given card width. */
   function indexBottom(layout, cw, ch) {
     if (layout === 'index') return 2 + cw * 0.34 * 0.82 + cw * 0.23 + 4;
     if (layout === 'trad') return 2 + cw * 0.27 * 0.82 + cw * 0.22 + 4;
     if (layout === 'bold') return 2 + cw * 0.38 + 4;
+    if (layout === 'solo') return cw * SOLO_INDEX_BOTTOM + 3;
     if (layout === 'classic') return ch * CLASSIC_INDEX_BOTTOM + 2;
     return 1 + cw * 0.40 + 4;
   }

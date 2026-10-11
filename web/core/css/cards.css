@@ -414,6 +414,76 @@
   box-shadow: 0 0 0 1px #1c2068, 0 1.5px 4px rgba(0, 0, 0, 0.6);
 }
 
+/* ---------- Solitaire: the plain white solitaire card ----------
+   A big sans rank top-left and its suit top-right, then either one very large
+   suit (A to 10) or the English-pattern court figure filling the bottom two
+   thirds edge to edge (J, Q, K). White face, thin grey edge. */
+[data-cards="solitaire"] {
+  --face: #fff;
+  --edge: 0 0 0 0.75px #8f8f8f, 0 1px 2.5px rgba(0, 0, 0, 0.3);
+  --i0: #000; --i1: #e3141c; --i2: #e3141c; --i3: #000;
+}
+[data-layout="solo"] .card.up { background: var(--face); }
+[data-layout="solo"] .card.suit-0 { color: var(--i0); }
+[data-layout="solo"] .card.suit-1 { color: var(--i1); }
+[data-layout="solo"] .card.suit-2 { color: var(--i2); }
+[data-layout="solo"] .card.suit-3 { color: var(--i3); }
+[data-layout="solo"] .card.up .corner,
+[data-layout="solo"] .card.up .pip,
+[data-layout="solo"] .card.up .face-letter { display: none; }
+[data-layout="solo"] .card.up .index {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  left: calc(var(--cw) * 0.07);
+  right: calc(var(--cw) * 0.05);
+  top: calc(var(--cw) * 0.04);
+  line-height: 1;
+  font-family: 'Helvetica Neue', Helvetica, Arial, var(--sans, sans-serif);
+  font-weight: 400;
+}
+[data-layout="solo"] .index b { font-weight: 400; font-size: calc(var(--cw) * 0.56); letter-spacing: -0.03em; }
+[data-layout="solo"] .card[data-rank="10"] .index b { letter-spacing: -0.12em; margin-left: calc(var(--cw) * -0.03); }
+[data-layout="solo"] .index .su { width: calc(var(--cw) * 0.36); height: calc(var(--cw) * 0.36); margin: calc(var(--cw) * 0.07) 0 0; }
+[data-layout="solo"] .card.up:not(.court) .bigsu {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: calc(var(--ch) * 0.685);
+  width: calc(var(--cw) * 0.92);
+  height: calc(var(--cw) * 0.92);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.court-art.tall {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--ch) * 0.645);
+  background-size: cover;
+  background-position: center top;
+}
+[data-layout="solo"][data-court="tall"] .card.court.up .court-art.tall { display: block; }
+/* The index already carries the suit; a picked court window adds no second one. */
+[data-layout="solo"]:is([data-faces="bust"], [data-faces="cut"], [data-faces="close"]) .card.court.up .bigsu { display: none; }
+.card[data-suit="0"][data-rank="11"] .court-art.tall { background-image: url("../assets/courts/english/J-spades.webp"); }
+.card[data-suit="0"][data-rank="12"] .court-art.tall { background-image: url("../assets/courts/english/Q-spades.webp"); }
+.card[data-suit="0"][data-rank="13"] .court-art.tall { background-image: url("../assets/courts/english/K-spades.webp"); }
+.card[data-suit="1"][data-rank="11"] .court-art.tall { background-image: url("../assets/courts/english/J-hearts.webp"); }
+.card[data-suit="1"][data-rank="12"] .court-art.tall { background-image: url("../assets/courts/english/Q-hearts.webp"); }
+.card[data-suit="1"][data-rank="13"] .court-art.tall { background-image: url("../assets/courts/english/K-hearts.webp"); }
+.card[data-suit="2"][data-rank="11"] .court-art.tall { background-image: url("../assets/courts/english/J-diamonds.webp"); }
+.card[data-suit="2"][data-rank="12"] .court-art.tall { background-image: url("../assets/courts/english/Q-diamonds.webp"); }
+.card[data-suit="2"][data-rank="13"] .court-art.tall { background-image: url("../assets/courts/english/K-diamonds.webp"); }
+.card[data-suit="3"][data-rank="11"] .court-art.tall { background-image: url("../assets/courts/english/J-clubs.webp"); }
+.card[data-suit="3"][data-rank="12"] .court-art.tall { background-image: url("../assets/courts/english/Q-clubs.webp"); }
+.card[data-suit="3"][data-rank="13"] .court-art.tall { background-image: url("../assets/courts/english/K-clubs.webp"); }
+[data-cards="solitaire"] .card.down {
+  background: url("../assets/backs/solitaire.svg") center / 100% 100% no-repeat;
+  box-shadow: 0 0 0 0.75px #8f8f8f, 0 1px 2.5px rgba(0, 0, 0, 0.35);
+}
+
 /* ---------- finishes: how any look is lit ---------- */
 /* Moody: deep, shadowed cards — a vignette darkens the corners and the foot of
    every card, and each one throws a heavy shadow on the cloth. */
@@ -829,6 +899,8 @@
 [data-back="medallion-blue"] .card.down { background-image: url("../assets/backs/medallion-blue.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
 [data-back="lattice-red"] .card.down { background-image: url("../assets/backs/lattice-red.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
 [data-back="lattice-blue"] .card.down { background-image: url("../assets/backs/lattice-blue.webp"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="solitaire"] .card.down { background-image: url("../assets/backs/solitaire.svg"); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+[data-back="solitaire"] .card.down:not(.hint-src):not(.can-deal) { box-shadow: 0 0 0 0.75px #8f8f8f, 0 1px 2.5px rgba(0, 0, 0, 0.35); }
 .back-row { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
 .back-pick {
   display: flex; align-items: center; gap: 10px;

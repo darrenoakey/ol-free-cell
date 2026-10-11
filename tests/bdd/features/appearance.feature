@@ -1,6 +1,10 @@
 Feature: Appearance persists
   FreeCell keeps a chosen table and card look across a reload.
 
+  Scenario: A fresh install uses the Solitaire deck
+    Given the daily app is open
+    Then the board uses the "solitaire" cards and "solitaire" back
+
   Scenario: A non-default theme and card look survive reload
     Given the daily app is open
     When the appearance sheet is opened

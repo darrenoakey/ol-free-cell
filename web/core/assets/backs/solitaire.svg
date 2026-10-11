@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 290" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8423b"/>
+      <stop offset="1" stop-color="#b82a25"/>
+    </linearGradient>
+    <pattern id="weave" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M0 4 4 0 8 4 4 8Z" fill="none" stroke="#7a0f0c" stroke-opacity=".16" stroke-width=".7"/>
+      <circle cx="4" cy="4" r=".7" fill="#fff" fill-opacity=".07"/>
+    </pattern>
+  </defs>
+  <rect width="200" height="290" fill="#fff"/>
+  <rect x="9" y="9" width="182" height="272" rx="7" fill="url(#red)"/>
+  <rect x="9" y="9" width="182" height="272" rx="7" fill="url(#weave)"/>
+  <rect x="14" y="14" width="172" height="262" rx="4" fill="none" stroke="#7a0f0c" stroke-opacity=".22" stroke-width=".8"/>
+  <rect x="9.4" y="9.4" width="181.2" height="271.2" rx="6.8" fill="none" stroke="#6e0d0a" stroke-opacity=".35" stroke-width=".8"/>
+</svg>

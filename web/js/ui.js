@@ -252,7 +252,7 @@ const UI = {
     const cardHeight = sampleWidth * (768 / 512);
     const look = this.els.board.dataset.cards
       || (this.controller && this.controller.look && this.controller.look.cards)
-      || 'classic';
+      || 'solitaire';
     const fanGap = Math.max(Math.max(14, cardHeight * 0.22), OL.Cards.minStackOffset(look, cardHeight, {
       numbers: this.els.board.dataset.numbers,
       faces: this.els.board.dataset.faces,
@@ -423,7 +423,7 @@ const UI = {
     OL.Cards.setGeometry(this.els.board, sampleWidth, cardHeight);
     const look = this.els.board.dataset.cards
       || (this.controller && this.controller.look && this.controller.look.cards)
-      || 'classic';
+      || 'solitaire';
     const fanGap = Math.max(Math.max(14, cardHeight * 0.22), OL.Cards.minStackOffset(look, cardHeight, {
       numbers: this.els.board.dataset.numbers,
       faces: this.els.board.dataset.faces,

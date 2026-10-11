@@ -15,6 +15,7 @@ const DESCRIPTOR = {
 };
 const PROGRESS_PREFIX = 'olfreecell.progress.';
 const SETTINGS_KEY = 'olfreecell.settings';
+const SOLITAIRE_ADOPTION_KEY = OL.Store.key(APP_ID, 'look-solitaire.v1');
 
 function nextFrame() {
   return new Promise((resolve) => setTimeout(resolve, 20));
@@ -50,7 +51,7 @@ const App = {
   stats: null,
   historyDoc: null,
   settings: { theme: 'emerald' },
-  look: { theme: 'emerald', cards: 'classic', finish: 'natural', numbers: 'look', faces: 'look' },
+  look: { theme: 'emerald', cards: 'solitaire', finish: 'natural', back: 'solitaire', numbers: 'look', faces: 'look' },
   _recordableOnFinish: true,
   calMonth: null,
   calendarPlay: false,
@@ -92,16 +93,27 @@ const App = {
     let theme = await OL.Store.get(OL.Store.key(APP_ID, 'table'));
     let cards = await OL.Store.get(OL.Store.key(APP_ID, 'cards'));
     let finish = await OL.Store.get(OL.Store.key(APP_ID, 'finish'));
+    let back = await OL.Store.get(OL.Store.key(APP_ID, 'back'));
+
+    // Move every player to the fleet-wide Solitaire deck once. The marker makes
+    // future launches respect choices made in the Appearance sheet.
+    if (!(await OL.Store.get(SOLITAIRE_ADOPTION_KEY))) {
+      cards = 'solitaire';
+      back = 'solitaire';
+      await OL.Store.set(OL.Store.key(APP_ID, 'cards'), cards);
+      await OL.Store.set(OL.Store.key(APP_ID, 'back'), back);
+      await OL.Store.set(SOLITAIRE_ADOPTION_KEY, '1');
+    }
+
     if (!theme) {
       const saved = legacySettings || (await OL.Store.getJSON(SETTINGS_KEY, null));
       theme = saved && (saved.theme === 'midnight' || saved.theme === 'emerald') ? saved.theme : 'emerald';
     }
-    if (!cards) cards = 'classic';
+    if (!cards) cards = 'solitaire';
     if (!finish) finish = 'natural';
-    const back = await OL.Store.get(OL.Store.key(APP_ID, 'back'));
     const numbers = await OL.Store.get(OL.Store.key(APP_ID, 'numbers'));
     const faces = await OL.Store.get(OL.Store.key(APP_ID, 'faces'));
-    this.applyLook(theme, cards, finish, back, numbers || 'look', faces || 'look');
+    this.applyLook(theme, cards, finish, back || 'solitaire', numbers || 'look', faces || 'look');
   },
 
   applyLook(themeId, cardsId, finishId, backId, numbersId, facesId) {
