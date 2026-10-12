@@ -455,15 +455,18 @@
         }
       }
     }
-    fillChoiceList(numberList, offerChoices, Cards.NUMBERS, 'number-pick', 'numbers', 'Numbers', current.numbers || 'look',
+    // The look's own way is named after the look ("Solitaire"), not "Match look".
+    const lookName = (Cards.STYLE_BY_ID[current.cards] || Cards.STYLE_BY_ID.original).name;
+    fillChoiceList(numberList, offerChoices, Cards.numberChoices(current.cards), 'number-pick', 'numbers', 'Numbers',
+      Cards.numbersFor(current.cards, current.numbers || 'look'), lookName,
       (option) => Cards.sampleDeck(current.cards, current.finish, Cards.NUMBER_SAMPLE_IDS, true, current.back, option.id, 'look'));
-    fillChoiceList(faceList, offerChoices, Cards.FACES, 'face-pick', 'faces', 'Faces', current.faces || 'look',
+    fillChoiceList(faceList, offerChoices, Cards.FACES, 'face-pick', 'faces', 'Faces', current.faces || 'look', lookName,
       (option) => Cards.sampleDeck(current.cards, current.finish, Cards.FACE_SAMPLE_IDS, true, current.back, 'look', option.id));
     if (panel) refreshTabs(panel, current, showCards, offerChoices);
   }
 
   /** One row of choices, each previewed with real cards drawn the way that choice draws them. */
-  function fillChoiceList(list, shown, options, className, dataKey, label, selected, sample) {
+  function fillChoiceList(list, shown, options, className, dataKey, label, selected, lookName, sample) {
     if (!list) return;
     list.textContent = '';
     list.hidden = !shown;
@@ -473,11 +476,12 @@
       btn.type = 'button';
       btn.className = className;
       btn.dataset[dataKey] = option.id;
-      btn.setAttribute('aria-label', `${option.name} ${label.toLowerCase()}`);
+      const optionName = option.id === 'look' ? lookName : option.name;
+      btn.setAttribute('aria-label', `${optionName} ${label.toLowerCase()}`);
       btn.setAttribute('aria-pressed', option.id === selected ? 'true' : 'false');
       const name = document.createElement('span');
       name.className = 'look-name';
-      name.textContent = option.name;
+      name.textContent = optionName;
       btn.append(name, sample(option));
       list.appendChild(btn);
     }
@@ -490,7 +494,7 @@
     const finishName = finish.id === 'natural' ? '' : ` · ${finish.name}`;
     const back = backId && Cards.BACK_BY_ID[backId];
     const backName = back && back.id !== Cards.defaultBack(look) ? ` · ${back.name} back` : '';
-    const numbers = look.layout !== 'classic' && Cards.NUMBER_BY_ID[numbersId];
+    const numbers = look.layout !== 'classic' && Cards.NUMBER_BY_ID[Cards.numbersFor(look.id, numbersId)];
     const faces = look.layout !== 'classic' && Cards.FACE_BY_ID[facesId];
     const numbersName = numbers && numbers.id !== 'look' ? ` · ${numbers.name} numbers` : '';
     const facesName = faces && faces.id !== 'look' ? ` · ${faces.name} faces` : '';

@@ -47,11 +47,28 @@
    * way, the traditional little pips, or one big suit with a bigger rank.
    */
   const NUMBERS = [
-    { id: 'look', name: 'Match look' },
+    { id: 'look', name: 'Look' },
     { id: 'pips', name: 'Pips' },
     { id: 'single', name: 'Big suit' },
   ];
   const NUMBER_BY_ID = Object.fromEntries(NUMBERS.map((n) => [n.id, n]));
+
+  /**
+   * The numbers choices a look offers. Classic prints its own faces, so it offers
+   * none; Solitaire's own way already is one big suit, so it does not offer a
+   * second, smaller big suit beside it.
+   */
+  function numberChoices(lookId) {
+    const style = STYLE_BY_ID[lookId] || STYLE_BY_ID.original;
+    if (style.layout === 'classic') return [];
+    if (style.layout === 'solo') return NUMBERS.filter((n) => n.id !== 'single');
+    return NUMBERS;
+  }
+
+  /** The numbers choice a look actually draws: one it does not offer falls back to its own way. */
+  function numbersFor(lookId, numbers) {
+    return numberChoices(lookId).some((n) => n.id === numbers) ? numbers : 'look';
+  }
 
   /**
    * How the picture cards (J, Q, K) are drawn, independent of the look and of the
@@ -59,7 +76,7 @@
    * four illustrated windows.
    */
   const FACES = [
-    { id: 'look', name: 'Match look' },
+    { id: 'look', name: 'Look' },
     { id: 'letter', name: 'Letter' },
     { id: 'double', name: 'Picture' },
     { id: 'bust', name: 'Bust' },
@@ -223,7 +240,7 @@
   function dress(deck, id, finish, back, numbers, faces) {
     const style = STYLE_BY_ID[id] || STYLE_BY_ID.original;
     const printed = style.layout === 'classic';
-    const n = !printed && NUMBER_BY_ID[numbers] ? numbers : 'look';
+    const n = numbersFor(style.id, numbers);
     const f = !printed && FACE_BY_ID[faces] ? faces : 'look';
     deck.dataset.cards = style.id;
     deck.dataset.layout = style.layout;
@@ -268,8 +285,8 @@
    * jack's hook; a ten ends higher). The fan must keep that strip visible.
    */
   const CLASSIC_INDEX_BOTTOM = 240 / 768;
-  /** Solitaire's rank line box: 0.05 of the width above the top edge, 0.64 of the width tall (cards.css). */
-  const SOLO_INDEX_BOTTOM = -0.05 + 0.64;
+  /** Solitaire's index ends with the corner suit's box, 0.46 of the width (cards.css). */
+  const SOLO_INDEX_BOTTOM = 0.46;
 
   /** Where the index ends, in px, for one arrangement at a given card width. */
   function indexBottom(layout, cw, ch) {
@@ -291,9 +308,10 @@
     const style = STYLE_BY_ID[look] || STYLE_BY_ID.original;
     const cw = ch / 1.45;
     const printed = style.layout === 'classic';
-    const numbers = !printed && choice && NUMBER_BY_ID[choice.numbers] ? choice.numbers : 'look';
+    const numbers = choice ? numbersFor(style.id, choice.numbers) : 'look';
     const faces = !printed && choice && FACE_BY_ID[choice.faces] ? choice.faces : 'look';
-    const numberLayout = numbers === 'pips' ? 'trad' : (numbers === 'single' ? 'bold' : style.layout);
+    // Solitaire keeps its own index whichever way its number cards are drawn.
+    const numberLayout = style.layout === 'solo' || numbers === 'look' ? style.layout : (numbers === 'pips' ? 'trad' : 'bold');
     const faceLayout = faces === 'letter' ? 'modern' : (faces === 'look' ? style.layout : 'trad');
     return Math.ceil(Math.max(indexBottom(numberLayout, cw, ch), indexBottom(faceLayout, cw, ch)));
   }
@@ -307,7 +325,7 @@
 
   const Cards = {
     SUITS, SUIT_GLYPH, RANK_LABEL, STYLES, STYLE_BY_ID, FINISHES, FINISH_BY_ID,
-    BACKS, BACK_BY_ID, defaultBack, NUMBERS, NUMBER_BY_ID, FACES, FACE_BY_ID,
+    BACKS, BACK_BY_ID, defaultBack, NUMBERS, NUMBER_BY_ID, numberChoices, numbersFor, FACES, FACE_BY_ID,
     NUMBER_SAMPLE_IDS, FACE_SAMPLE_IDS,
     SAMPLE_IDS, PIPS, installDefs, cardElement, dress, sampleDeck, faceMarkup,
     cardFromId, resolveCard, setGeometry, minStackOffset,

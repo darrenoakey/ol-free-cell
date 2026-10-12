@@ -443,15 +443,19 @@
   font-family: 'Helvetica Neue', Helvetica, Arial, var(--sans, sans-serif);
   font-weight: 400;
 }
+/* The rank is drawn exactly as tall as the corner suit: a Helvetica capital is
+   0.71 of the font size and the suit glyph is 0.40 of the card width, so the font
+   is 0.563 of the width. The capital's top lines up with the suit's top. */
 [data-layout="solo"] .index b {
   position: absolute;
-  left: calc(var(--cw) * 0.035);
-  top: calc(var(--cw) * -0.05);
+  left: calc(var(--cw) * 0.03);
+  top: calc(var(--cw) * -0.059);
   font-weight: 400;
-  font-size: calc(var(--cw) * 0.64);
+  font-size: calc(var(--cw) * 0.563);
   letter-spacing: -0.03em;
 }
-[data-layout="solo"] .card[data-rank="10"] .index b { left: calc(var(--cw) * 0.0); font-size: calc(var(--cw) * 0.50); letter-spacing: -0.13em; top: calc(var(--cw) * -0.01); }
+/* "10" keeps the full height but is drawn narrower, so it never meets the suit. */
+[data-layout="solo"] .card[data-rank="10"] .index b { left: calc(var(--cw) * -0.025); letter-spacing: -0.08em; transform: scaleX(0.84); transform-origin: left top; }
 [data-layout="solo"] .index .su {
   position: absolute;
   right: calc(var(--cw) * -0.035);
@@ -460,17 +464,35 @@
   height: calc(var(--cw) * 0.46);
   margin: 0;
 }
-/* Every number card, ace included, wears the same big suit, standing on the bottom edge. */
+/* Every number card, ace included, wears the same big suit, centred across the
+   card and set up off the bottom edge so white shows all round it. */
 [data-layout="solo"] .card.up:not(.court) .bigsu {
   display: block;
   position: absolute;
   left: 50%;
-  bottom: calc(var(--cw) * -0.03);
-  width: calc(var(--cw) * 1.0);
-  height: calc(var(--cw) * 1.0);
+  bottom: calc(var(--cw) * 0.08);
+  width: calc(var(--cw) * 0.84);
+  height: calc(var(--cw) * 0.84);
   margin: 0;
   transform: translateX(-50%);
   pointer-events: none;
+}
+/* Solitaire with pips keeps its own index and lays the traditional spots out
+   across the full width below it. The spot table (cards.js PIPS) is written for
+   a right-hand zone (x 0.50-0.86, y 0.19-0.81); this box maps those columns to
+   0.24/0.50/0.76 of the width and those rows to the space under the index. */
+[data-layout="solo"][data-numbers="pips"] .card.up:not(.court) .bigsu { display: none; }
+[data-layout="solo"][data-numbers="pips"] .card.up:not(.court) .pips {
+  display: block;
+  inset: auto;
+  left: -48.2%;
+  width: 144.4%;
+  top: 27.9%;
+  height: 74.2%;
+}
+[data-layout="solo"][data-numbers="pips"] .pp .su {
+  width: calc(var(--cw) * var(--pp) * 1.05);
+  height: calc(var(--cw) * var(--pp) * 1.05);
 }
 .court-art.tall {
   left: 0;
@@ -545,34 +567,34 @@
    override how the look draws number cards and picture cards. "look" (the
    default) leaves the look alone. These rules come last so that, at equal
    specificity, they win over every look's own layout rules. */
-[data-numbers="pips"] .card.up:not(.court) .corner,
-[data-numbers="pips"] .card.up:not(.court) .pip,
-[data-numbers="pips"] .card.up:not(.court) .bigsu,
-[data-numbers="single"] .card.up:not(.court) .corner,
-[data-numbers="single"] .card.up:not(.court) .pip,
-[data-numbers="single"] .card.up:not(.court) .pips { display: none; }
-[data-numbers="pips"] .card.up:not(.court) .index,
-[data-numbers="single"] .card.up:not(.court) .index { display: flex; left: 3px; top: 2px; }
-[data-numbers="pips"] .card.up:not(.court) .index {
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .corner,
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .pip,
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .bigsu,
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .corner,
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .pip,
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .pips { display: none; }
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .index,
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .index { display: flex; left: 3px; top: 2px; }
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .index {
   flex-direction: column;
   align-items: center;
   gap: 0;
   line-height: 0.82;
 }
-[data-numbers="pips"] .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.27); letter-spacing: -0.06em; }
-[data-numbers="pips"] .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; font-size: calc(var(--cw) * 0.25); }
-[data-numbers="pips"] .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.19); height: calc(var(--cw) * 0.19); margin: calc(var(--cw) * 0.03) 0 0; }
-[data-numbers="pips"] .card.up:not(.court) .pips { display: block; }
-[data-numbers="single"] .card.up:not(.court) .index {
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.27); letter-spacing: -0.06em; }
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; font-size: calc(var(--cw) * 0.25); }
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.19); height: calc(var(--cw) * 0.19); margin: calc(var(--cw) * 0.03) 0 0; }
+[data-numbers="pips"]:not([data-layout="solo"]) .card.up:not(.court) .pips { display: block; }
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .index {
   flex-direction: row;
   align-items: center;
   gap: calc(var(--cw) * 0.03);
   line-height: 1;
 }
-[data-numbers="single"] .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.38); letter-spacing: -0.05em; }
-[data-numbers="single"] .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; }
-[data-numbers="single"] .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.22); height: calc(var(--cw) * 0.22); margin: 0; }
-[data-numbers="single"] .card.up:not(.court) .bigsu {
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .index b { font-size: calc(var(--cw) * 0.38); letter-spacing: -0.05em; }
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court)[data-rank="10"] .index b { letter-spacing: -0.1em; }
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .index .su { width: calc(var(--cw) * 0.22); height: calc(var(--cw) * 0.22); margin: 0; }
+[data-numbers="single"]:not([data-layout="solo"]) .card.up:not(.court) .bigsu {
   display: block;
   position: absolute;
   left: 50%;
@@ -582,7 +604,7 @@
   margin: calc(var(--cw) * -0.2) 0 0 calc(var(--cw) * -0.31);
   pointer-events: none;
 }
-[data-numbers="single"] .card.up[data-rank="1"] .bigsu {
+[data-numbers="single"]:not([data-layout="solo"]) .card.up[data-rank="1"] .bigsu {
   width: calc(var(--cw) * 0.82);
   height: calc(var(--cw) * 0.82);
   margin: calc(var(--cw) * -0.3) 0 0 calc(var(--cw) * -0.41);
