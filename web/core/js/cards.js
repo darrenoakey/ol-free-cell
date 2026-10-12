@@ -293,7 +293,7 @@
     if (layout === 'index') return 2 + cw * 0.34 * 0.82 + cw * 0.23 + 4;
     if (layout === 'trad') return 2 + cw * 0.27 * 0.82 + cw * 0.22 + 4;
     if (layout === 'bold') return 2 + cw * 0.38 + 4;
-    if (layout === 'solo') return cw * SOLO_INDEX_BOTTOM + 3;
+    if (layout === 'solo') return cw * SOLO_INDEX_BOTTOM + 1 + 3; // the corner suit sits 1px in
     if (layout === 'classic') return ch * CLASSIC_INDEX_BOTTOM + 2;
     return 1 + cw * 0.40 + 4;
   }

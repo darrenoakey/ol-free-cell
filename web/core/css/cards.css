@@ -420,7 +420,11 @@
    thirds edge to edge (J, Q, K). White face, thin grey edge. */
 [data-cards="solitaire"] {
   --face: #fff;
-  --edge: 0 0 0 0.75px #8f8f8f, 0 1px 2.5px rgba(0, 0, 0, 0.3);
+  /* Hairline edge plus a soft drop shadow: a tight contact shade and a wider,
+     fainter fall-off a little below, so cards lift off the felt and each card
+     in a fan reads as lying on the one beneath it. */
+  --solo-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.26);
+  --edge: 0 0 0 0.75px #8f8f8f, var(--solo-shadow);
   --i0: #000; --i1: #e3141c; --i2: #e3141c; --i3: #000;
 }
 [data-layout="solo"] .card.up { background: var(--face); }
@@ -432,9 +436,9 @@
 [data-layout="solo"] .card.up .pip,
 [data-layout="solo"] .card.up .face-letter { display: none; }
 /* Tight to the corners: the rank sits hard in the top-left, the suit hard in the
-   top-right, and the big suit sits on the bottom edge. Glyph boxes carry their own
+   top-right, each 1px in from its corner, and the big suit sits low. Glyph boxes carry their own
    padding (the suit path starts 1.6/24 in), so the boxes overhang the edges. */
-[data-cards="solitaire"] .card { border-radius: calc(var(--cw) * 0.045); }
+[data-cards="solitaire"] .card { border-radius: calc(var(--cw) * 0.06); }
 [data-layout="solo"] .card.up .index {
   display: block;
   inset: 0 0 auto 0;
@@ -448,18 +452,18 @@
    is 0.563 of the width. The capital's top lines up with the suit's top. */
 [data-layout="solo"] .index b {
   position: absolute;
-  left: calc(var(--cw) * 0.03);
-  top: calc(var(--cw) * -0.059);
+  left: calc(var(--cw) * 0.03 + 1px);
+  top: calc(var(--cw) * -0.059 + 1px);
   font-weight: 400;
   font-size: calc(var(--cw) * 0.563);
   letter-spacing: -0.03em;
 }
 /* "10" keeps the full height but is drawn narrower, so it never meets the suit. */
-[data-layout="solo"] .card[data-rank="10"] .index b { left: calc(var(--cw) * -0.025); letter-spacing: -0.08em; transform: scaleX(0.84); transform-origin: left top; }
+[data-layout="solo"] .card[data-rank="10"] .index b { left: calc(var(--cw) * -0.025 + 1px); letter-spacing: -0.09em; transform: scaleX(0.78); transform-origin: left top; }
 [data-layout="solo"] .index .su {
   position: absolute;
-  right: calc(var(--cw) * -0.035);
-  top: calc(var(--cw) * 0.0);
+  right: calc(var(--cw) * -0.035 + 1px);
+  top: 1px;
   width: calc(var(--cw) * 0.46);
   height: calc(var(--cw) * 0.46);
   margin: 0;
@@ -470,9 +474,9 @@
   display: block;
   position: absolute;
   left: 50%;
-  bottom: calc(var(--cw) * 0.08);
-  width: calc(var(--cw) * 0.84);
-  height: calc(var(--cw) * 0.84);
+  bottom: calc(var(--cw) * 0.1);
+  width: calc(var(--cw) * 0.76);
+  height: calc(var(--cw) * 0.76);
   margin: 0;
   transform: translateX(-50%);
   pointer-events: none;
@@ -519,7 +523,7 @@
 .card[data-suit="3"][data-rank="13"] .court-art.tall { background-image: url("../assets/courts/english/K-clubs.webp"); }
 [data-cards="solitaire"] .card.down {
   background: url("../assets/backs/solitaire.svg") center / 100% 100% no-repeat;
-  box-shadow: 0 0 0 0.75px #8f8f8f, 0 1px 2.5px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 0.75px #8f8f8f, var(--solo-shadow);
 }
 
 /* ---------- finishes: how any look is lit ---------- */
