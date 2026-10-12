@@ -420,10 +420,10 @@
    thirds edge to edge (J, Q, K). White face, thin grey edge. */
 [data-cards="solitaire"] {
   --face: #fff;
-  /* Hairline edge plus a soft drop shadow: a tight contact shade and a wider,
-     fainter fall-off a little below, so cards lift off the felt and each card
-     in a fan reads as lying on the one beneath it. */
-  --solo-shadow: 0 1px 2px rgba(0, 0, 0, 0.27), 0 3px 10px rgba(0, 0, 0, 0.32);
+  /* Hairline edge plus a soft drop shadow cast down and to the right: a tight
+     contact shade and a wider fall-off. The negative spread pulls the soft layer
+     in, so none of it shows past the card's left or top edge. */
+  --solo-shadow: 1px 1px 2px rgba(0, 0, 0, 0.27), 3px 4px 10px -2px rgba(0, 0, 0, 0.34);
   --edge: 0 0 0 0.75px #8f8f8f, var(--solo-shadow);
   --i0: #000; --i1: #e3141c; --i2: #e3141c; --i3: #000;
 }
