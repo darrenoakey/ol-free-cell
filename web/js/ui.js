@@ -442,7 +442,8 @@ const UI = {
       for (let i = 0; i < cards.length; i++) {
         const el = this.cardFrontEl(cards[i]);
         el.style.top = `${i * fanGap}px`;
-        el.style.zIndex = String(i + 1);
+        // Columns stack left to right so the down-right drop shadow falls under the next column.
+        el.style.zIndex = String(col * 100 + i + 1);
         const fromTop = cards.length - i;
         if (fromTop <= seq) {
           el.classList.add('playable');

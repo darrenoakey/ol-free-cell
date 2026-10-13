@@ -4,6 +4,7 @@ Feature: Appearance persists
   Scenario: A fresh install uses the Solitaire deck
     Given the daily app is open
     Then the board uses the "solitaire" cards and "solitaire" back
+    And the tableau columns stack left to right, each over the one to its left
 
   Scenario: A non-default theme and card look survive reload
     Given the daily app is open

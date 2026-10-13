@@ -407,7 +407,7 @@ body.native-ios.landscape-right #app {
     0 0 14px 3px rgba(244, 211, 123, 0.5),
     var(--card-shadow-playable);
   transform: translateY(-5px) scale(1.02);
-  z-index: 50 !important;
+  z-index: 900 !important;
   filter: none;
 }
 .card.drag-source-hidden {

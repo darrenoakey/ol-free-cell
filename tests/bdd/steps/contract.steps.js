@@ -89,3 +89,19 @@ Then('a classic card has no ring or outline', async function () {
   assert.ok(!style.shadow.includes('0px 0px 0px 1px'), `ring shadow: ${style.shadow}`);
   assert.ok(style.outlineStyle === 'none' || style.outlineWidth === '0px', `outline: ${style.outlineStyle} ${style.outlineWidth}`);
 });
+
+// The drop shadow falls down and to the right, so each column must lie over the
+// column to its left: a deep card never casts its shadow over the next column.
+Then('the tableau columns stack left to right, each over the one to its left', async function () {
+  // Judge the settled table, not cards still flying in from the deal.
+  await this.page.waitForFunction(() => !globalThis.OL.Deal.busy() && !document.querySelector('.ol-in-flight'));
+  const cols = await this.page.evaluate((() => [...document.querySelectorAll('#tableau .column')]
+    .map((col) => [...col.querySelectorAll('.card')].map((el) => Number(getComputedStyle(el).zIndex)))
+    .filter((zs) => zs.length)));
+  assert.equal(cols.length, 8);
+  for (let c = 1; c < cols.length; c++) {
+    const below = Math.max(...cols[c - 1]);
+    const above = Math.min(...cols[c]);
+    if (!(above > below)) throw new Error(`column ${c} (z ${above}) does not lie over column ${c - 1} (z ${below})`);
+  }
+});
