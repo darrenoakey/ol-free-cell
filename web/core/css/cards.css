@@ -491,8 +491,8 @@
   inset: auto;
   left: -48.2%;
   width: 144.4%;
-  top: 27.9%;
-  height: 74.2%;
+  top: max(27.9%, calc(var(--solo-art-top) - var(--ch) * 0.09));
+  bottom: -2.1%;
 }
 [data-layout="solo"][data-numbers="pips"] .pp .su {
   width: calc(var(--cw) * var(--pp) * 1.05);
@@ -505,6 +505,36 @@
   height: calc(var(--ch) * 0.64);
   background-size: cover;
   background-position: center top;
+}
+/* A stacked column shows each covered card's top --solo-strip px: the rank and
+   corner suit, nothing else. It mirrors Cards.minStackOffset for Solitaire (the
+   index box is 0.46 of a Spider-aspect width, plus 4px). Every picture and pip
+   starts at least 2px below it, so no crown tip or pip edge peeks out of a fan. */
+[data-layout="solo"] {
+  --solo-strip: calc(var(--ch) * 0.46 / 1.45 + 4px);
+  --solo-art-top: calc(var(--solo-strip) + 2px);
+}
+[data-layout="solo"] .court-art.tall,
+[data-layout="solo"] .court-art.cut {
+  top: max(calc(var(--ch) * 0.36), var(--solo-art-top));
+  height: auto;
+}
+[data-layout="solo"] .court-art.close {
+  top: var(--solo-art-top);
+  background-position: calc(var(--cw) * -0.34) calc(var(--cw) * 0.5 - var(--solo-art-top));
+}
+[data-layout="solo"] .court-art.bust {
+  --bust: min(calc(var(--cw) * 0.86), calc(var(--ch) - var(--solo-art-top) - var(--cw) * 0.04));
+  top: max(calc(var(--ch) * 0.27), calc(var(--solo-art-top) + var(--cw) * 0.014));
+  left: calc((var(--cw) - var(--bust)) / 2);
+  width: var(--bust);
+  height: var(--bust);
+}
+[data-layout="solo"] .court-art.double {
+  top: var(--solo-art-top);
+  bottom: calc(var(--cw) * 0.04);
+  height: auto;
+  margin-top: 0;
 }
 [data-layout="solo"][data-court="tall"] .card.court.up .court-art.tall { display: block; }
 /* The index already carries the suit; a picked court window adds no second one. */
