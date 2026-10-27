@@ -48,6 +48,28 @@ Under an exclusive lock (other submits queue behind it):
 5. **Deploy** — run `./run deploy` with cwd = the canonical checkout. Nonzero → **automatic rollback**: main resets to the previous commit and `./run deploy` re-runs to restore prod.
 6. **Publish** — push `main` to origin (via a one-shot allow-push flag the pre-push hook honours) and advance `last-green`.
 
+## Release time budget: measured profile
+
+Target: queue-to-publish under **180s** (hard check cap 600s — never raise it).
+Measured from `.git/greenline/journal.jsonl`:
+
+- **Warm releases run 60–150s.** Typical split: check 5–100s, deploy (App Store
+  preflight workflow on GitHub) 33–60s, publish ~2s, queue ~0s.
+- **Cold-cache releases can approach the ceiling.** The worst recorded release
+  (553s) was a candidate that itself changed Capacitor/SPM dependency metadata:
+  SPM re-resolution plus a full Release rebuild plus a cold simulator boot made
+  `ios-test` alone take 404s. That cost is legitimate — the gate compiles only
+  the candidate's own diff, and the diff *was* the dependency graph. The very
+  next release on the now-warm gate worktree measured 64s.
+- **Levers already in place** (do not regress): persistent gate worktree with
+  warm `node_modules`, `local/check-derived-data`, and SPM checkouts; npm-ci
+  skipped when the lockfile is unchanged; `scripts/check-impact.mjs` selects
+  suites from the diff; the gate simulator boots in the background during the
+  cheap steps; bdd-web overlaps the Capacitor/native checks.
+- **If a release ever trends toward 600s**, first grep the gate log for
+  `[check-timing]` lines and split the dominant stage — the evidence, not a
+  guess, decides the fix.
+
 ## The contract (you must implement in `./run`)
 
 - **`./run check`** — cwd = the worktree being gated. Build + lint + FULL tests against a
