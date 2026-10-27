@@ -1,5 +1,12 @@
 /* Board cards keep FreeCell's column geometry. OL card faces paint inside it.
-   Loaded after core/css/cards.css so the sunlit-felt assertions still hold. */
+   Loaded after core/css/cards.css so the sunlit-felt assertions still hold.
+
+   Felt layering contract: the background stack below is painted in this order —
+   1. var(--ol-felt) card art (topmost, from core), 2. radial soft-light vignette,
+   3. 96px fractal-noise SVG in overlay mode, 4. base linear-gradient — and the
+   background-blend-mode / background-size lists must stay in the same count and
+   order as these layers. Keep vars --felt-1..3, --felt-highlight/base/edge
+   defined; themes override them, never the stack itself. */
 
 body.theme-emerald,
 body.theme-midnight {
