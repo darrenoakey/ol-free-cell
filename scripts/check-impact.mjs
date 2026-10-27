@@ -44,6 +44,19 @@ export function isVersionOnlyPbxproj(patch) {
     /^[+-]\s*(MARKETING_VERSION|CURRENT_PROJECT_VERSION)\s*=/.test(line));
 }
 
+// Only an existing leading block comment may change. Compare every byte after
+// its first closing delimiter (and the leading whitespace), not a regex-stripped
+// stylesheet: comment-like text in strings/URLs and token boundaries are CSS.
+export function isLeadingCssCommentOnly(before, after) {
+  if (typeof before !== "string" || typeof after !== "string" || before === after) return false;
+  const leadingComment = /^(\s*)\/\*[\s\S]*?\*\//;
+  const oldComment = leadingComment.exec(before);
+  const newComment = leadingComment.exec(after);
+  return Boolean(oldComment && newComment
+    && oldComment[1] === newComment[1]
+    && before.slice(oldComment[0].length) === after.slice(newComment[0].length));
+}
+
 export function requiredSuites(changes) {
   if (!Array.isArray(changes) || changes.length === 0) return [...ALL_SUITES];
   let web = false;
@@ -69,6 +82,8 @@ export function requiredSuites(changes) {
       continue;
     }
     if (isMetadata(path)) continue;
+    if (path.startsWith("web/") && path.endsWith(".css")
+      && isLeadingCssCommentOnly(change.before, change.after)) continue;
     if (path.startsWith("web/") || path.startsWith("tests/bdd/") || path.startsWith("assets/")) {
       web = true;
       ios = true;
@@ -96,6 +111,10 @@ export function changesFromGit(repo) {
   const names = git(repo, ["diff", "--name-only", base, "HEAD"]).split("\n").filter(Boolean);
   return names.map((path) => ({
     path,
+    ...(path.startsWith("web/") && path.endsWith(".css") ? {
+      before: git(repo, ["show", `${base}:${path}`]),
+      after: git(repo, ["show", `HEAD:${path}`]),
+    } : {}),
     patch: path.endsWith("project.pbxproj")
       ? git(repo, ["diff", "--unified=0", base, "HEAD", "--", path])
       : "",
