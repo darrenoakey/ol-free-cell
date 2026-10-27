@@ -116,7 +116,7 @@ deploy_preflight() {
             run_id="${new_run_ids[0]}"
             break
         fi
-        sleep 5
+        sleep 2
     done
     if [[ -z "$run_id" ]]; then
         echo "ERROR: no matching workflow_dispatch run appeared for $sha" >&2
@@ -141,7 +141,7 @@ deploy_preflight() {
             echo "ERROR: App Store preflight run $run_id finished with ${run_state#*$'\t'}" >&2
             return 1
         fi
-        sleep 10
+        sleep 5
     done
 
     echo "ERROR: App Store preflight run $run_id exceeded its 1800-second deadline" >&2
@@ -235,8 +235,20 @@ check_steps() {
         SIM_SETUP_PID=$!
     fi
 
-    step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web"
-    step unit-tests node --test tests/unit/
+    # verify-core and unit-tests are independent of each other; run them
+    # concurrently so the serial prefix of the check stays short.
+    step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web" &
+    VERIFY_CORE_PID=$!
+    step unit-tests node --test tests/unit/ &
+    UNIT_TESTS_PID=$!
+    VERIFY_CORE_RC=0
+    wait "$VERIFY_CORE_PID" || VERIFY_CORE_RC=$?
+    UNIT_TESTS_RC=0
+    wait "$UNIT_TESTS_PID" || UNIT_TESTS_RC=$?
+    if [[ "$VERIFY_CORE_RC" -ne 0 || "$UNIT_TESTS_RC" -ne 0 ]]; then
+        echo "ERROR: verify-core rc=$VERIFY_CORE_RC, unit-tests rc=$UNIT_TESTS_RC" >&2
+        exit 1
+    fi
 
     # npm ci only when dependencies actually changed; node_modules is kept warm
     # in the persistent gate worktree. The hidden lockfile npm ci writes is the
@@ -246,16 +258,16 @@ check_steps() {
     else
         echo "[check-timing] npm-ci: skipped, node_modules matches package-lock.json (total $((SECONDS - CHECK_T0))s)" >&2
     fi
-    step npm-audit npm audit
-
     # A freshly created gate worktree has no cucumber binary. Start browser BDD
-    # only after the lockfile-compatible dependencies are installed, then let it
-    # overlap the remaining Capacitor and native checks.
+    # as soon as the lockfile-compatible dependencies are installed, then let it
+    # overlap npm-audit and the remaining Capacitor and native checks.
     if need bdd-web; then
         BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
         npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
         BDD_WEB_PID=$!
     fi
+
+    step npm-audit npm audit
 
     if need cap-sync; then
         step cap-sync npx --no-install cap sync ios
