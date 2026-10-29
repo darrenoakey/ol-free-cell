@@ -25,6 +25,10 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function rootExpanded() {
+  return !!(window.OL && window.OL.Duo && window.OL.Duo.read(window).expanded);
+}
+
 function setupOrientationLock() {
   const isCapacitor = window.Capacitor !== undefined;
   const isIOS =
@@ -36,6 +40,9 @@ function setupOrientationLock() {
   function updateOrientation() {
     document.body.classList.remove('landscape-left', 'landscape-right');
     const angle = screen.orientation ? screen.orientation.angle : window.orientation || 0;
+    const expanded = rootExpanded();
+    document.body.classList.toggle('duo-expanded', expanded);
+    if (expanded) return;
     if (window.innerWidth > window.innerHeight) {
       document.body.classList.add(angle === 90 || angle === -270 ? 'landscape-left' : 'landscape-right');
     }
@@ -58,6 +65,9 @@ const App = {
   selectedDate: null,
   undos: 0,
   restarts: 0,
+  duoCompanion: null,
+  duoMount: null,
+  duoObserver: null,
 
   async init() {
     setupOrientationLock();
@@ -73,12 +83,35 @@ const App = {
     await this.loadLook(gathered.blob && gathered.blob.settings);
     this.stats = this.computeStats();
     this._wireSheets();
+    this.initDuoWorkspace();
     await this.enterDaily(Prng.todayDateString());
   },
 
   computeStats() {
     const today = Prng.todayDateString();
     return OL.Stats.compute(this.historyDoc, today);
+  },
+
+  initDuoWorkspace() {
+    this.duoCompanion = new FreeCellDuo.Companion(this, $('duo-companion'));
+    this.duoCompanion.init();
+    this.duoMount = OL.Duo.mount($('duo-workspace'), {
+      primary: $('app'),
+      secondary: $('duo-companion'),
+      label: 'FreeCell table',
+      secondaryLabel: 'FreeCell companion',
+    });
+    this.duoObserver = OL.Duo.observe((state) => {
+      document.body.classList.toggle('duo-expanded', state.expanded);
+      if (state.expanded) document.body.classList.remove('landscape-left', 'landscape-right');
+      if (this.game) {
+        requestAnimationFrame(() => UI.render(this.game, this.stats, this.context));
+      }
+    });
+  },
+
+  refreshDuo() {
+    if (this.duoCompanion) this.duoCompanion.refresh();
   },
 
   dayMap() {
@@ -191,6 +224,7 @@ const App = {
 
     UI.setLoading(false);
     await UI.dealIn(this.game, this.stats, this.context, animateDeal);
+    this.refreshDuo();
     if (existing) {
       const suffix = existing.solved ? ' \u00b7 Cleared \u2713' : ' \u00b7 Stuck';
       UI.els.dateLabel.textContent += suffix;
@@ -218,6 +252,7 @@ const App = {
 
     UI.setLoading(false);
     await UI.dealIn(this.game, this.stats, this.context);
+    this.refreshDuo();
   },
 
   canInteract() {
@@ -282,6 +317,7 @@ const App = {
     if (!this.game || !this.game.undo()) return;
     this.undos++;
     UI.render(this.game, this.stats, this.context);
+    this.refreshDuo();
     if (this.context.mode === 'daily') await this.saveProgress();
   },
 
@@ -412,22 +448,15 @@ const App = {
 
   async saveProgress() {
     if (this.context.mode !== 'daily' || !this.game) return;
-    await OL.Store.setJSON(PROGRESS_PREFIX + this.context.date, {
-      cascades: this.game.cascades,
-      freecells: this.game.freecells,
-      foundations: this.game.foundations,
-      foundationTops: this.game.foundationTops,
-      moves: this.game.moves,
-      hintsUsed: this.game.hintsUsed,
-      startedAt: this.game.startedAt,
-      status: this.game.status,
-      undos: this.undos,
-      restarts: this.restarts,
-    });
+    await OL.Store.setJSON(
+      PROGRESS_PREFIX + this.context.date,
+      this.game.progressSnapshot(this.undos, this.restarts),
+    );
   },
 
   async _afterGameMove() {
     UI.render(this.game, this.stats, this.context);
+    this.refreshDuo();
     if (this.game.status === 'playing') {
       if (this.context.mode === 'daily') await this.saveProgress();
       return;
@@ -449,6 +478,7 @@ const App = {
       await OL.Store.remove(PROGRESS_PREFIX + this.context.date);
       this.stats = this.computeStats();
       UI.renderTopStrip(this.game, this.stats, this.context);
+      this.refreshDuo();
       const record = {
         moves: this.game.moves,
         hintsUsed: this.game.hintsUsed,

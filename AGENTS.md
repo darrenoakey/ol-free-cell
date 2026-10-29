@@ -34,3 +34,8 @@ Shared chrome, history, and cards are vendored in `web/core` by `node ~/src/ol-c
 Legacy daily data lives in Capacitor Preferences keys `olfreecell.completed.<date>`, `olfreecell.stats`, `olfreecell.progress.<date>`, and `olfreecell.settings`. `web/js/migrate.js` gathers those into canonical `ol-free-cell.history.v1`. Do not delete the legacy keys. Progress stays on the old progress key so an in-progress deal survives the upgrade.
 
 `themes.css` has a broken selector, `html[data-theme="emerald"], html[data-ol-theme="emerald"] body::before`, which sets `opacity: 0` on the document. `web/css/board.css` restores `opacity: 1`. Keep that override until core is fixed, or the table screenshots and the live app go blank.
+
+## iPhone Duo
+
+- `DuoWorkspaceUITests.swift` must stay in the AppUITests target in `project.pbxproj`; the ordinary phone gate runs only the `AppUITests` class, while the Duo class needs a separate folded/open Duo simulator qualification through the fleet's native slot.
+- Browser progress fixtures installed with `addInitScript` run again on reload. Seed legacy progress only when its key is absent, or the fixture will overwrite the newer autosave that the reload test is meant to verify.

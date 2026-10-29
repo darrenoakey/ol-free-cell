@@ -334,7 +334,7 @@ check_steps() {
             COMPILER_INDEX_STORE_ENABLE=NO \
             ENABLE_PREVIEWS=NO \
             -parallel-testing-enabled NO \
-            -only-testing:AppUITests \
+            -only-testing:AppUITests/AppUITests \
             test
     else
         skip ios-test

@@ -28,6 +28,11 @@ class FreeCellGame {
     // Selection for drag play: { type:'col'|'fc', index, count }
     this.selection = null;
 
+    // Append-only review journal. Its snapshots are independent of the undo
+    // stack, so reviewing or undoing never destroys the visible move timeline.
+    this.reviewBase = this._snapshot();
+    this.reviewLog = [];
+
     // No foundation auto-eat — player moves every card home.
     this._checkEnd();
   }
@@ -73,6 +78,16 @@ class FreeCellGame {
     this.selection = null;
     this.status = 'playing';
     this.finishedAt = null;
+    this.reviewBase = this._snapshot();
+    this.reviewLog = [];
+    if (progress.review && progress.review.base && Array.isArray(progress.review.entries)) {
+      this.reviewBase = this._cloneReviewSnapshot(progress.review.base);
+      this.reviewLog = progress.review.entries.map((entry) => ({
+        ...entry,
+        before: this._cloneReviewSnapshot(entry.before),
+        after: this._cloneReviewSnapshot(entry.after),
+      }));
+    }
     this._checkEnd();
   }
 
@@ -103,6 +118,54 @@ class FreeCellGame {
     this.selection = null;
     this.status = 'playing';
     this.finishedAt = null;
+  }
+
+  _cloneReviewSnapshot(snapshot) {
+    return {
+      cascades: DealGen.cloneCascades(snapshot.cascades),
+      freecells: DealGen.cloneFreecells(snapshot.freecells),
+      foundations: DealGen.cloneFoundations(snapshot.foundations),
+      foundationTops: snapshot.foundationTops.map((card) => (card ? { ...card } : null)),
+      moves: snapshot.moves,
+    };
+  }
+
+  _recordReview(kind, before, move = null) {
+    this.reviewLog.push({
+      kind,
+      move: move ? { ...move } : null,
+      before,
+      after: this._snapshot(),
+    });
+  }
+
+  /** Serializable replay data; legacy progress without it remains valid. */
+  reviewState() {
+    return {
+      base: this._cloneReviewSnapshot(this.reviewBase),
+      entries: this.reviewLog.map((entry) => ({
+        ...entry,
+        before: this._cloneReviewSnapshot(entry.before),
+        after: this._cloneReviewSnapshot(entry.after),
+      })),
+    };
+  }
+
+  /** Existing progress fields plus optional replay data for newer launches. */
+  progressSnapshot(undos, restarts) {
+    return {
+      cascades: this.cascades,
+      freecells: this.freecells,
+      foundations: this.foundations,
+      foundationTops: this.foundationTops,
+      moves: this.moves,
+      hintsUsed: this.hintsUsed,
+      startedAt: this.startedAt,
+      status: this.status,
+      undos,
+      restarts,
+      review: this.reviewState(),
+    };
   }
 
   clearSelection() {
@@ -206,6 +269,7 @@ class FreeCellGame {
       this.selection = null;
       this._packFreecells();
       this._checkEnd();
+      this._recordReview('move', snap, { type: 'fc-to-fc', from: sel.index, fc, card });
       return { type: 'fc-to-fc', from: sel.index, fc, card };
     }
     this.selection = null;
@@ -334,6 +398,7 @@ class FreeCellGame {
       this._packFreecells();
     }
     this._checkEnd();
+    this._recordReview('move', snap, move);
     return { ...move };
   }
 
@@ -346,8 +411,10 @@ class FreeCellGame {
 
   undo() {
     if (this.history.length === 0) return false;
+    const before = this._snapshot();
     const snap = this.history.pop();
     this._restoreSnap(snap);
+    this._recordReview('undo', before);
     return true;
   }
 
@@ -385,5 +452,4 @@ class FreeCellGame {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
-const Game = { FreeCellGame };
+globalThis.Game = { FreeCellGame };

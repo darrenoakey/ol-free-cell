@@ -43,6 +43,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        // Ordinary phones keep the original portrait-only behavior. The unfolded
+        // iPhone Duo has a >600pt short edge and needs landscape for two regions.
+        guard let screen = window?.screen else { return .portrait }
+        let bounds = screen.fixedCoordinateSpace.bounds
+        let shortEdge = min(bounds.width, bounds.height)
+        if shortEdge > 600 {
+            return [.portrait, .landscapeLeft, .landscapeRight]
+        }
         return .portrait
     }
 

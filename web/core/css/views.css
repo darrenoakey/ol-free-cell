@@ -1,9 +1,10 @@
 /* OL views — calendar, stats, appearance. */
 /* ---------- calendar ---------- */
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.cal-dow { text-align: center; font-size: 11px; letter-spacing: 0.1em; color: var(--ol-ink-faint, var(--ink-faint)); padding-bottom: 2px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-dow { min-width: 0; text-align: center; font-size: 11px; letter-spacing: 0.1em; color: var(--ol-ink-faint, var(--ink-faint)); padding-bottom: 2px; }
 .cal-day {
   position: relative;
+  min-width: 0;
   aspect-ratio: 1 / 1.16;
   border-radius: 14px;
   display: flex;

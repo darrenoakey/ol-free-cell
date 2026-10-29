@@ -1,0 +1,15 @@
+/* Duo expanded workspace. Content and visual design remain app-owned. */
+.ol-duo-workspace {
+  display: grid;
+  box-sizing: border-box;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ol-duo-gap, 16px);
+  align-items: start;
+  min-width: 0;
+}
+.ol-duo-region { min-width: 0; }
+.ol-duo-workspace[data-duo="compact"] > .ol-duo-secondary { display: none; }
+.ol-duo-workspace[data-duo="expanded"] {
+  grid-template-columns: minmax(0, var(--ol-duo-primary, 1fr)) minmax(var(--ol-duo-companion-min, 280px), var(--ol-duo-companion, 1fr));
+}
