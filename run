@@ -260,17 +260,26 @@ check_steps() {
     fi
     # A freshly created gate worktree has no cucumber binary. Start browser BDD
     # as soon as the lockfile-compatible dependencies are installed, then let it
-    # overlap npm-audit and the remaining Capacitor and native checks.
+    # overlap npm-audit, cap-sync, and the native checks. Scenarios are
+    # independent (each worker gets its own server on an OS-assigned port and
+    # its own browser), so cucumber workers shard them — one serial run is the
+    # check's long pole.
     if need bdd-web; then
         BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
-        npm run test:bdd:web >"$BDD_WEB_LOG" 2>&1 &
+        npm run test:bdd:web -- --parallel 3 >"$BDD_WEB_LOG" 2>&1 &
         BDD_WEB_PID=$!
     fi
 
     step npm-audit npm audit
 
+    # cap sync only rewrites iOS assets and plugin metadata. It is independent
+    # of the browser suite and npm-audit, so run it concurrently and reap it
+    # before the native build below (cap-sync is only ever selected together
+    # with ios-test — see scripts/check-impact.mjs).
+    CAP_SYNC_PID=""
     if need cap-sync; then
-        step cap-sync npx --no-install cap sync ios
+        step cap-sync npx --no-install cap sync ios &
+        CAP_SYNC_PID=$!
     else
         skip cap-sync
     fi
@@ -293,6 +302,18 @@ check_steps() {
         wait "$SIM_SETUP_PID" || { echo "ERROR: simulator setup failed" >&2; exit 1; }
         SIM_UDID="$(cat "$SIM_READY_FILE")"
         rm -f "$SIM_READY_FILE"
+
+        # Reap the concurrent cap sync before the native build consumes its
+        # output; a failed sync must fail the check.
+        if [[ -n "$CAP_SYNC_PID" ]]; then
+            CAP_SYNC_RC=0
+            wait "$CAP_SYNC_PID" || CAP_SYNC_RC=$?
+            CAP_SYNC_PID=""
+            if [[ "$CAP_SYNC_RC" -ne 0 ]]; then
+                echo "ERROR: cap-sync rc=$CAP_SYNC_RC" >&2
+                exit 1
+            fi
+        fi
 
         # Warm checkouts skip SPM resolution. Resolving capacitor-swift-pm on
         # every release is the ~100s before an incremental test build.
