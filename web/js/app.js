@@ -84,7 +84,63 @@ const App = {
     this.stats = this.computeStats();
     this._wireSheets();
     this.initDuoWorkspace();
+    this._wireRollover();
     await this.enterDaily(Prng.todayDateString());
+  },
+
+  /**
+   * Daily rollover: at 11:59:59 of its own local day an unfinished daily is
+   * failed with a bad-luck toast, its progress cleared, and today's fresh
+   * deal opened. Checked on visibility change, Capacitor resume, and a
+   * timer armed for local midnight while the app stays open.
+   */
+  _wireRollover() {
+    let lastDay = Prng.todayDateString();
+    const check = async () => {
+      const today = Prng.todayDateString();
+      if (today === lastDay) return;
+      lastDay = today;
+      const unfinished = this.context.mode === 'daily'
+        && this.game
+        && this.game.status === 'playing'
+        && this.context.date
+        && this.context.date < today;
+      if (unfinished) {
+        const date = this.context.date;
+        const now = Date.now();
+        await OL.Store.remove(PROGRESS_PREFIX + date);
+        if (this._recordableOnFinish) {
+          this._recordableOnFinish = false;
+          this.historyDoc = await OL.History.record(APP_ID, {
+            date,
+            solved: false,
+            status: 'failed',
+            ms: Math.max(0, now - this.game.startedAt),
+            moves: this.game.moves,
+            hints: this.game.hintsUsed,
+            undos: this.undos,
+            restarts: this.restarts,
+            extra: { expired: true, finishedAt: now },
+          });
+        }
+        UI.toast('Bad luck \u2014 time ran out on that daily.');
+      }
+      await this.enterDaily(today);
+      this.stats = this.computeStats();
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void check();
+    });
+    document.addEventListener('resume', () => void check());
+    const arm = () => {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      setTimeout(() => {
+        void check();
+        arm();
+      }, Math.min(next - now + 50, 2 ** 31 - 1));
+    };
+    arm();
   },
 
   computeStats() {
@@ -193,6 +249,13 @@ const App = {
   async enterDaily(dateStr) {
     OL.Deal.settle();
     const today = Prng.todayDateString();
+
+    // An unfinished daily from an earlier local day expired at 11:59:59 of
+    // its own day: record the bad-luck result for that day and drop the
+    // stale board instead of resuming it. First result wins, so an
+    // already-recorded day is never overwritten.
+    await this.expireStaleDailies(today);
+
     this.context = { mode: 'daily', date: dateStr, isToday: dateStr === today };
     UI.setMode('daily');
     UI.setLoading(true, this.context.isToday ? "Shuffling today's challenge\u2026" : `Shuffling ${dateStr}\u2026`);
@@ -229,6 +292,49 @@ const App = {
       const suffix = existing.solved ? ' \u00b7 Cleared \u2713' : ' \u00b7 Stuck';
       UI.els.dateLabel.textContent += suffix;
     }
+  },
+
+  /**
+   * Fail every unfinished daily whose local day has ended. The progress key
+   * holds the date, and OL.History.record ranks a failed day below a
+   * completed one, so solved days are never replaced.
+   */
+  async expireStaleDailies(today) {
+    const keys = await this._listProgressKeys();
+    for (const date of keys) {
+      if (date === today || date > today) continue;
+      const progress = await OL.Store.getJSON(PROGRESS_PREFIX + date, null);
+      if (!progress || progress.status !== 'playing') continue;
+      const now = Date.now();
+      const ms = Number.isFinite(progress.startedAt) ? Math.max(0, now - progress.startedAt) : 0;
+      await OL.History.record(APP_ID, {
+        date,
+        solved: false,
+        status: 'failed',
+        ms,
+        moves: progress.moves || 0,
+        hints: progress.hintsUsed || 0,
+        undos: progress.undos || 0,
+        restarts: progress.restarts || 0,
+        extra: { expired: true, finishedAt: now },
+      });
+      await OL.Store.remove(PROGRESS_PREFIX + date);
+      this.historyDoc = await OL.History.load(APP_ID);
+    }
+  },
+
+  async _listProgressKeys() {
+    const keys = await this._listKeys();
+    return keys
+      .filter((k) => k.startsWith(PROGRESS_PREFIX))
+      .map((k) => k.slice(PROGRESS_PREFIX.length));
+  },
+
+  async _listKeys() {
+    const prefs = OL.Store.prefs();
+    if (!prefs) return Object.keys(localStorage);
+    const { keys } = await prefs.keys();
+    return keys || [];
   },
 
   async enterPractice(seed) {
