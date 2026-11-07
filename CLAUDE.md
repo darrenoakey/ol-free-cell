@@ -17,6 +17,7 @@ Capacitor-based FreeCell iOS game with a date-seeded daily challenge that is
     per-date completion records, in-progress autosave, streak/stats
   - `web/js/confetti.js` — canvas confetti burst for the win screen
   - `web/js/ui.js` — DOM rendering + pointer drag-and-drop (cards/stacks) + deal-in / hint glow
+  - `web/js/daily.js` — pure daily rules: 11:59:59 deadline, what counts as started, the bad-luck record
   - `web/js/app.js` — bootstrap + controller: owns the live `FreeCellGame`; no sound
   - `web/assets/cards/*.png` — 52-card deck art (shared with ol-golf / ol-bridge cardmaker)
   - `web/assets/card-back.svg` — ornate card back
@@ -44,6 +45,14 @@ in this app — daily or practice — is solvable by construction.
 The same solver powers **Hint**: it re-proves solvability from the player's current
 position and returns the next move on a winning line, or `null` (never a lie) if the
 player has wandered into a legal-but-losing state.
+
+## Daily expiry
+
+The saved `olfreecell.progress.<date>` key is the proof a daily was started, so only
+today's daily ever writes one, and a restart rewrites it. `App.openToday` is the one path
+for launch and rollover: it fails stale days at their own 11:59:59, deletes their saves,
+then opens today. Archive games are replays: they never save, never fail a day, and can
+only fill in a day with no result.
 
 ## Commands
 

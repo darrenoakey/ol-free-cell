@@ -15,6 +15,7 @@ const DESCRIPTOR = {
 };
 const PROGRESS_PREFIX = 'olfreecell.progress.';
 const SETTINGS_KEY = 'olfreecell.settings';
+const BAD_LUCK_NOTICE = 'Bad luck \u2014 time ran out on that daily.';
 const SOLITAIRE_ADOPTION_KEY = OL.Store.key(APP_ID, 'look-solitaire.v1');
 
 function nextFrame() {
@@ -85,14 +86,25 @@ const App = {
     this._wireSheets();
     this.initDuoWorkspace();
     this._wireRollover();
-    await this.enterDaily(Prng.todayDateString());
+    await this.openToday();
   },
 
   /**
-   * Daily rollover: at 11:59:59 of its own local day an unfinished daily is
-   * failed with a bad-luck toast, its progress cleared, and today's fresh
-   * deal opened. Checked on visibility change, Capacitor resume, and a
-   * timer armed for local midnight while the app stays open.
+   * Fail whatever earlier days were left unfinished, then open today's deal.
+   * Launch and rollover both come through here, so a dead daily is handled
+   * the same way whichever one notices it first.
+   */
+  async openToday() {
+    const today = Prng.todayDateString();
+    const expired = await this.expireStaleDailies(today);
+    this.stats = this.computeStats();
+    await this.enterDaily(today);
+    if (expired > 0) UI.toast(BAD_LUCK_NOTICE);
+  },
+
+  /**
+   * Daily rollover while the app is running: checked on visibility change,
+   * Capacitor resume, and a timer armed for local midnight.
    */
   _wireRollover() {
     let lastDay = Prng.todayDateString();
@@ -100,33 +112,7 @@ const App = {
       const today = Prng.todayDateString();
       if (today === lastDay) return;
       lastDay = today;
-      const unfinished = this.context.mode === 'daily'
-        && this.game
-        && this.game.status === 'playing'
-        && this.context.date
-        && this.context.date < today;
-      if (unfinished) {
-        const date = this.context.date;
-        const now = Date.now();
-        await OL.Store.remove(PROGRESS_PREFIX + date);
-        if (this._recordableOnFinish) {
-          this._recordableOnFinish = false;
-          this.historyDoc = await OL.History.record(APP_ID, {
-            date,
-            solved: false,
-            status: 'failed',
-            ms: Math.max(0, now - this.game.startedAt),
-            moves: this.game.moves,
-            hints: this.game.hintsUsed,
-            undos: this.undos,
-            restarts: this.restarts,
-            extra: { expired: true, finishedAt: now },
-          });
-        }
-        UI.toast('Bad luck \u2014 time ran out on that daily.');
-      }
-      await this.enterDaily(today);
-      this.stats = this.computeStats();
+      await this.openToday();
     };
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') void check();
@@ -248,17 +234,9 @@ const App = {
 
   async enterDaily(dateStr) {
     OL.Deal.settle();
-    const today = Prng.todayDateString();
-
-    // An unfinished daily from an earlier local day expired at 11:59:59 of
-    // its own day: record the bad-luck result for that day and drop the
-    // stale board instead of resuming it. First result wins, so an
-    // already-recorded day is never overwritten.
-    await this.expireStaleDailies(today);
-
-    this.context = { mode: 'daily', date: dateStr, isToday: dateStr === today };
+    const isToday = dateStr === Prng.todayDateString();
     UI.setMode('daily');
-    UI.setLoading(true, this.context.isToday ? "Shuffling today's challenge\u2026" : `Shuffling ${dateStr}\u2026`);
+    UI.setLoading(true, isToday ? "Shuffling today's challenge\u2026" : `Shuffling ${dateStr}\u2026`);
     await nextFrame();
 
     const dealResult = DealGen.generateDeal(dateStr);
@@ -267,15 +245,20 @@ const App = {
       UI.toast('Could not prove a deal — try again');
       return;
     }
+    // The context moves with the game, so a drop landing in the gap above
+    // cannot save the old board under the new date.
+    this.context = { mode: 'daily', date: dateStr, isToday };
     this.game = new Game.FreeCellGame(dealResult);
     const existing = this.recordFor(dateStr);
-    const won = existing && existing.solved !== false && existing.status !== 'failed' && existing.status !== 'attempted';
-    this._recordableOnFinish = !won;
+    const won = FreeCellDaily.isSolved(existing);
+    // An archive game is a replay of a day that is over: it can fill in a day
+    // with no result, but a recorded result stands.
+    this._recordableOnFinish = isToday ? !won : !existing;
     this.undos = 0;
     this.restarts = 0;
 
     let animateDeal = true;
-    if (!won) {
+    if (!won && isToday) {
       const progress = await OL.Store.getJSON(PROGRESS_PREFIX + dateStr, null);
       if (progress) {
         this.game.restoreProgress(progress);
@@ -295,32 +278,23 @@ const App = {
   },
 
   /**
-   * Fail every unfinished daily whose local day has ended. The progress key
-   * holds the date, and OL.History.record ranks a failed day below a
-   * completed one, so solved days are never replaced.
+   * Fail every unfinished daily whose local day has ended and discard its
+   * saved state. A progress key exists only once a daily has been started,
+   * so a day that was never played has nothing here and is never failed.
+   * Returns how many days were failed by this sweep.
    */
   async expireStaleDailies(today) {
-    const keys = await this._listProgressKeys();
-    for (const date of keys) {
-      if (date === today || date > today) continue;
+    let expired = 0;
+    for (const date of await this._listProgressKeys()) {
+      if (date >= today) continue;
       const progress = await OL.Store.getJSON(PROGRESS_PREFIX + date, null);
-      if (!progress || progress.status !== 'playing') continue;
-      const now = Date.now();
-      const ms = Number.isFinite(progress.startedAt) ? Math.max(0, now - progress.startedAt) : 0;
-      await OL.History.record(APP_ID, {
-        date,
-        solved: false,
-        status: 'failed',
-        ms,
-        moves: progress.moves || 0,
-        hints: progress.hintsUsed || 0,
-        undos: progress.undos || 0,
-        restarts: progress.restarts || 0,
-        extra: { expired: true, finishedAt: now },
-      });
+      if (FreeCellDaily.startedInTime(date, progress) && !FreeCellDaily.isSolved(this.recordFor(date))) {
+        this.historyDoc = await OL.History.record(APP_ID, FreeCellDaily.failure(date, progress));
+        expired++;
+      }
       await OL.Store.remove(PROGRESS_PREFIX + date);
-      this.historyDoc = await OL.History.load(APP_ID);
     }
+    return expired;
   },
 
   async _listProgressKeys() {
@@ -361,8 +335,13 @@ const App = {
     this.refreshDuo();
   },
 
+  /** Today's daily, after midnight passed and before the rollover has run. */
+  dailyExpired() {
+    return this.context.mode === 'daily' && this.context.isToday && this.context.date !== Prng.todayDateString();
+  },
+
   canInteract() {
-    return !!(this.game && this.game.status === 'playing' && !OL.Deal.busy());
+    return !!(this.game && this.game.status === 'playing' && !OL.Deal.busy() && !this.dailyExpired());
   },
 
   beginDragCascade(col, count) {
@@ -420,7 +399,7 @@ const App = {
 
   async onUndo() {
     OL.Deal.settle();
-    if (!this.game || !this.game.undo()) return;
+    if (!this.game || this.dailyExpired() || !this.game.undo()) return;
     this.undos++;
     UI.render(this.game, this.stats, this.context);
     this.refreshDuo();
@@ -447,11 +426,15 @@ const App = {
       await this.enterPractice();
       return;
     }
+    if (this.dailyExpired()) return;
     this.restarts++;
+    const started = await OL.Store.getJSON(PROGRESS_PREFIX + this.context.date, null);
     await OL.Store.remove(PROGRESS_PREFIX + this.context.date);
     const restarts = this.restarts;
     await this.enterDaily(this.context.date);
     this.restarts = restarts;
+    // A restart wipes the board but does not un-start the day.
+    if (started) await this.saveProgress();
   },
 
   async onModeChange(mode) {
@@ -553,7 +536,7 @@ const App = {
   },
 
   async saveProgress() {
-    if (this.context.mode !== 'daily' || !this.game) return;
+    if (this.context.mode !== 'daily' || !this.context.isToday || !this.game) return;
     await OL.Store.setJSON(
       PROGRESS_PREFIX + this.context.date,
       this.game.progressSnapshot(this.undos, this.restarts),
@@ -568,9 +551,9 @@ const App = {
       return;
     }
 
-    if (this.context.mode === 'daily' && this._recordableOnFinish) {
+    const solved = this.game.status === 'won';
+    if (this.context.mode === 'daily' && this._recordableOnFinish && (solved || this.context.isToday)) {
       this._recordableOnFinish = false;
-      const solved = this.game.status === 'won';
       this.historyDoc = await OL.History.record(APP_ID, {
         date: this.context.date,
         solved,

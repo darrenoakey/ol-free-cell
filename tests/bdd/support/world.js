@@ -14,6 +14,9 @@ const contentTypes = new Map([
   ['.webp', 'image/webp'],
 ]);
 
+const DEFAULT_TIME_ZONE = 'Australia/Sydney';
+const VIEWPORT = { width: 390, height: 844 };
+
 let browser;
 let server;
 let rootUrl;
@@ -21,6 +24,8 @@ let rootUrl;
 class FreeCellWorld {
   page;
   context;
+  browser;
+  timeZone;
 }
 
 setWorldConstructor(FreeCellWorld);
@@ -50,7 +55,8 @@ BeforeAll(async () => {
 });
 
 Before(async function () {
-  this.context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  this.browser = browser;
+  this.context = await browser.newContext({ viewport: VIEWPORT, timezoneId: DEFAULT_TIME_ZONE });
   this.page = await this.context.newPage();
 });
 
@@ -80,4 +86,4 @@ AfterAll(async () => {
   ]);
 });
 
-export { rootUrl };
+export { DEFAULT_TIME_ZONE, VIEWPORT, rootUrl };
