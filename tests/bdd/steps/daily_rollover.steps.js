@@ -55,7 +55,11 @@ function recordToasts() {
 async function launch(world, date, time) {
   await world.context.addInitScript(recordToasts);
   await world.page.clock.install({ time: zoned(date, time, zone(world)) });
-  await world.page.goto(rootUrl, { waitUntil: 'networkidle' });
+  // Calendar rules, not card flight: reduced motion is a real product path and
+  // skips ~2s of deal-in per load. boardReady, not networkidle, proves the app
+  // is up. The full deal animation stays covered by the other features.
+  await world.page.emulateMedia({ reducedMotion: 'reduce' });
+  await world.page.goto(rootUrl, { waitUntil: 'load' });
   await boardReady(world.page);
 }
 
@@ -77,7 +81,7 @@ When('I note the foundation start', async function () {
 });
 
 When('I reload the app', async function () {
-  await this.page.reload({ waitUntil: 'networkidle' });
+  await this.page.reload({ waitUntil: 'load' });
   await boardReady(this.page);
 });
 

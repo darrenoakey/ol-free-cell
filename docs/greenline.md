@@ -61,6 +61,11 @@ Measured from `.git/greenline/journal.jsonl`:
   `ios-test` alone take 404s. That cost is legitimate — the gate compiles only
   the candidate's own diff, and the diff *was* the dependency graph. The very
   next release on the now-warm gate worktree measured 64s.
+- **Browser BDD cost is per page load.** A 223s release (load ~700) spent 156s
+  in `bdd-web`: 25 daily scenarios at ~9s each, mostly the real deal-in animation
+  on every launch, reload, and archive open. Calendar scenarios now run with
+  reduced motion and prove readiness with `boardReady`, not `networkidle`; give
+  new date/logic scenarios the same launch path.
 - **Levers already in place** (do not regress): persistent gate worktree with
   warm `node_modules`, `local/check-derived-data`, and SPM checkouts; npm-ci
   skipped when the lockfile is unchanged; `scripts/check-impact.mjs` selects

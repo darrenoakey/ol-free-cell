@@ -9,7 +9,6 @@ Feature: Daily rollover
 
   Scenario: The daily deal is deterministic for a date
     Given the date is "2026-11-04" at "09:00"
-    And I launch OL FreeCell at the root
     When I note the foundation start
     And I reload the app
     Then the daily deal is the same as before
@@ -33,7 +32,6 @@ Feature: Daily rollover
 
   Scenario: A started daily fails when midnight passes with the app open
     Given the date is "2026-11-04" at "23:59"
-    And I launch OL FreeCell at the root
     And I leave the daily in progress with saved progress
     When the clock passes midnight
     Then a bad luck toast is shown
@@ -148,7 +146,6 @@ Feature: Daily rollover
 
   Scenario: A suspended daily is killed on a later relaunch
     Given the date is "2026-11-04" at "20:00"
-    And I launch OL FreeCell at the root
     And I leave the daily in progress with saved progress
     When the date becomes "2026-11-06" at "08:00"
     And I reload the app
@@ -179,7 +176,6 @@ Feature: Daily rollover
 
   Scenario: A solved day is never overwritten by expiry
     Given the date is "2026-11-04" at "10:00"
-    And I launch OL FreeCell at the root
     When I have a solved record for "2026-11-04" with unfinished progress
     And the date becomes "2026-11-05" at "08:00"
     And I reload the app

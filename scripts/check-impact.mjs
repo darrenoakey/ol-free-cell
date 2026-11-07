@@ -84,7 +84,12 @@ export function requiredSuites(changes) {
     if (isMetadata(path)) continue;
     if (path.startsWith("web/") && path.endsWith(".css")
       && isLeadingCssCommentOnly(change.before, change.after)) continue;
-    if (path.startsWith("web/") || path.startsWith("tests/bdd/") || path.startsWith("assets/")) {
+    // Browser scenarios do not ship in the app, so they cannot break the native build.
+    if (path.startsWith("tests/bdd/")) {
+      web = true;
+      continue;
+    }
+    if (path.startsWith("web/") || path.startsWith("assets/")) {
       web = true;
       ios = true;
       continue;

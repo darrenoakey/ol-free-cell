@@ -235,35 +235,28 @@ check_steps() {
         SIM_SETUP_PID=$!
     fi
 
-    # verify-core and unit-tests are independent of each other; run them
-    # concurrently so the serial prefix of the check stays short.
-    step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web" &
-    VERIFY_CORE_PID=$!
-    step unit-tests node --test tests/unit/ &
-    UNIT_TESTS_PID=$!
-    VERIFY_CORE_RC=0
-    wait "$VERIFY_CORE_PID" || VERIFY_CORE_RC=$?
-    UNIT_TESTS_RC=0
-    wait "$UNIT_TESTS_PID" || UNIT_TESTS_RC=$?
-    if [[ "$VERIFY_CORE_RC" -ne 0 || "$UNIT_TESTS_RC" -ne 0 ]]; then
-        echo "ERROR: verify-core rc=$VERIFY_CORE_RC, unit-tests rc=$UNIT_TESTS_RC" >&2
-        exit 1
-    fi
-
     # npm ci only when dependencies actually changed; node_modules is kept warm
     # in the persistent gate worktree. The hidden lockfile npm ci writes is the
-    # freshness marker.
+    # freshness marker. It rewrites node_modules, so it precedes every step.
     if [[ ! -d node_modules ]] || [[ package-lock.json -nt node_modules/.package-lock.json ]]; then
         step npm-ci npm ci
     else
         echo "[check-timing] npm-ci: skipped, node_modules matches package-lock.json (total $((SECONDS - CHECK_T0))s)" >&2
     fi
-    # A freshly created gate worktree has no cucumber binary. Start browser BDD
-    # as soon as the lockfile-compatible dependencies are installed, then let it
-    # overlap npm-audit, cap-sync, and the native checks. Scenarios are
-    # independent (each worker gets its own server on an OS-assigned port and
-    # its own browser), so cucumber workers shard them — one serial run is the
-    # check's long pole.
+
+    # Every remaining step reads the candidate independently, so start them all
+    # together: a serial prefix (22s of it under host load) only delays the
+    # browser and native long poles. A failed step exits the check; the deadline
+    # wrapper then reaps whatever is still running in this session.
+    step verify-core node "$HOME/src/ol-core/scripts/verify-core.mjs" "$SCRIPT_DIR/web" &
+    VERIFY_CORE_PID=$!
+    step unit-tests node --test tests/unit/ &
+    UNIT_TESTS_PID=$!
+
+    # Scenarios are independent (each worker gets its own server on an
+    # OS-assigned port and its own browser), so cucumber workers shard them —
+    # one serial run is the check's long pole. Five workers on the loaded host
+    # measured 43s against three workers' 47s for 43% more CPU, so stay at three.
     if need bdd-web; then
         BDD_WEB_LOG="$SCRIPT_DIR/local/bdd-web.log"
         npm run test:bdd:web -- --parallel 3 >"$BDD_WEB_LOG" 2>&1 &
@@ -274,18 +267,27 @@ check_steps() {
     # transitive glob/minimatch); none of it ships in the app. Moderate
     # advisories in dev-only transitive deps must not block a release, so the
     # gate fails on high and above.
-    step npm-audit npm audit --audit-level=high
+    step npm-audit npm audit --audit-level=high &
+    NPM_AUDIT_PID=$!
 
-    # cap sync only rewrites iOS assets and plugin metadata. It is independent
-    # of the browser suite and npm-audit, so run it concurrently and reap it
-    # before the native build below (cap-sync is only ever selected together
-    # with ios-test — see scripts/check-impact.mjs).
+    # cap sync only rewrites iOS assets and plugin metadata. Reap it before the
+    # native build below (cap-sync is only ever selected together with ios-test
+    # — see scripts/check-impact.mjs).
     CAP_SYNC_PID=""
     if need cap-sync; then
         step cap-sync npx --no-install cap sync ios &
         CAP_SYNC_PID=$!
     else
         skip cap-sync
+    fi
+
+    VERIFY_CORE_RC=0
+    wait "$VERIFY_CORE_PID" || VERIFY_CORE_RC=$?
+    UNIT_TESTS_RC=0
+    wait "$UNIT_TESTS_PID" || UNIT_TESTS_RC=$?
+    if [[ "$VERIFY_CORE_RC" -ne 0 || "$UNIT_TESTS_RC" -ne 0 ]]; then
+        echo "ERROR: verify-core rc=$VERIFY_CORE_RC, unit-tests rc=$UNIT_TESTS_RC" >&2
+        exit 1
     fi
 
     if need ios-test; then
@@ -344,6 +346,13 @@ check_steps() {
         skip ios-test
     fi
 
+    NPM_AUDIT_RC=0
+    wait "$NPM_AUDIT_PID" || NPM_AUDIT_RC=$?
+    if [[ "$NPM_AUDIT_RC" -ne 0 ]]; then
+        echo "ERROR: npm-audit rc=$NPM_AUDIT_RC" >&2
+        exit 1
+    fi
+
     if [[ -n "$BDD_WEB_PID" ]]; then
         wait "$BDD_WEB_PID" || {
             echo "ERROR: bdd-web failed; last output:" >&2
@@ -375,6 +384,13 @@ except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.wait()
     raise SystemExit(124)
+if result != 0:
+    # A failed step exits the check with its overlapping steps still running;
+    # they must not outlive this attempt in the shared gate worktree.
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
 raise SystemExit(result)
 PY
 }

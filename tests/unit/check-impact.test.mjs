@@ -94,6 +94,13 @@ test("web assets run both the browser suite and the native UI test", () => {
   assert.ok(suites.includes("cap-sync"));
 });
 
+test("browser scenarios run the browser suite without the native UI test", () => {
+  const suites = requiredSuites([{ path: "tests/bdd/steps/daily_rollover.steps.js" }]);
+  assert.ok(suites.includes("bdd-web"));
+  assert.ok(!suites.includes("ios-test"));
+  assert.ok(!suites.includes("cap-sync"));
+});
+
 test("native source runs the UI test without the browser suite", () => {
   const suites = requiredSuites([{ path: "ios/App/App/SceneDelegate.swift" }]);
   assert.ok(suites.includes("ios-test"));
