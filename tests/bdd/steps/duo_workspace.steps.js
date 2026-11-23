@@ -85,12 +85,25 @@ Given('a legacy FreeCell deal is in progress at move 4', async function () {
 When('I unfold the Duo workspace', async function () {
   await this.page.setViewportSize({ width: 669, height: 951 });
   await this.page.locator('#duo-workspace[data-duo="expanded"]').waitFor();
-  await this.page.locator('#duo-companion').waitFor({ state: 'visible' });
+  await this.page.waitForFunction(() => window.App && App.game && !OL.Deal.busy());
 });
 
 When('I fold the Duo workspace', async function () {
   await this.page.setViewportSize({ width: 390, height: 844 });
   await this.page.locator('#duo-workspace[data-duo="compact"]').waitFor();
+  await this.page.waitForFunction(() => window.App && App.game && !OL.Deal.busy());
+});
+
+When('I open the Duo companion', async function () {
+  await this.page.getByRole('button', { name: 'Show companion' }).click();
+  await this.page.locator('#duo-companion.is-open').waitFor();
+  await this.page.locator('#duo-sheet').waitFor({ state: 'visible' });
+});
+
+When('I dismiss the Duo companion', async function () {
+  await this.page.getByRole('button', { name: 'Hide companion' }).last().click();
+  await this.page.locator('#duo-companion.is-open').waitFor({ state: 'detached' });
+  await this.page.locator('#duo-companion').waitFor({ state: 'hidden' });
 });
 
 When('I drag a playable card to an empty freecell', async function () {
@@ -137,8 +150,45 @@ When('I reopen OL FreeCell', async function () {
 });
 
 Then('the Duo companion is hidden', async function () {
-  await this.page.locator('#duo-workspace[data-duo="compact"]').waitFor();
   assert.equal(await this.page.locator('#duo-companion').isVisible(), false);
+  assert.equal(await this.page.locator('#duo-companion.is-open').count(), 0);
+});
+
+Then('the companion button is hidden', async function () {
+  assert.equal(await this.page.locator('#duo-btn').isVisible(), false);
+});
+
+Then('the companion button is visible', async function () {
+  await this.page.locator('#duo-btn').waitFor({ state: 'visible' });
+  assert.equal(await this.page.locator('#duo-btn').getAttribute('aria-expanded'), 'false');
+});
+
+/** The table owns the whole unfolded screen, whether the sheet is open or not. */
+async function assertUnfoldedPlayfield(page) {
+  const dimensions = await page.evaluate(() => {
+    const app = document.querySelector('#app').getBoundingClientRect();
+    const card = document.querySelector('#tableau .card').getBoundingClientRect();
+    return {
+      appWidth: app.width,
+      appLeft: app.left,
+      appRight: app.right,
+      viewportWidth: innerWidth,
+      cardRatio: card.width / card.height,
+    };
+  });
+  assert.ok(Math.abs(dimensions.appWidth - dimensions.viewportWidth) < 1, JSON.stringify(dimensions));
+  assert.ok(dimensions.appLeft < 1, JSON.stringify(dimensions));
+  assert.ok(Math.abs(dimensions.appRight - dimensions.viewportWidth) < 1, JSON.stringify(dimensions));
+  assert.ok(Math.abs(dimensions.cardRatio - 512 / 768) < 0.01, JSON.stringify(dimensions));
+}
+
+Then('the FreeCell table fills the unfolded width', async function () {
+  await this.page.waitForFunction(() => window.App && App.game && !OL.Deal.busy());
+  await assertUnfoldedPlayfield(this.page);
+});
+
+Then('the FreeCell table still fills the unfolded width', async function () {
+  await assertUnfoldedPlayfield(this.page);
 });
 
 Then('the FreeCell table uses the folded width', async function () {
@@ -152,13 +202,16 @@ Then('the FreeCell table uses the folded width', async function () {
   assert.ok(Math.abs(dimensions.cardRatio - 512 / 768) < 0.01, JSON.stringify(dimensions));
 });
 
-Then('the Duo companion is visible beside the FreeCell table', async function () {
+Then('the Duo companion is visible over the FreeCell table', async function () {
   const boxes = await this.page.evaluate(() => ({
     table: document.querySelector('#app').getBoundingClientRect().toJSON(),
     companion: document.querySelector('#duo-companion').getBoundingClientRect().toJSON(),
+    viewportWidth: innerWidth,
   }));
-  assert.ok(boxes.table.width > 0 && boxes.companion.width > 0);
-  assert.ok(boxes.table.x + boxes.table.width <= boxes.companion.x + 1);
+  assert.ok(boxes.table.width > 0 && boxes.companion.width > 0, JSON.stringify(boxes));
+  // A sheet floats above the table: it overlaps the table and hugs the right edge.
+  assert.ok(boxes.companion.x < boxes.table.x + boxes.table.width, JSON.stringify(boxes));
+  assert.ok(Math.abs(boxes.companion.right - boxes.viewportWidth) < 13, JSON.stringify(boxes));
 });
 
 Then('the Move history tab is selected', async function () {
@@ -211,11 +264,13 @@ Then('the Duo calendar shows that day\'s time and move count', async function ()
   assert.match(detail, /61 moves/);
 });
 
-Then('the Duo calendar still shows that day\'s time and move count', async function () {
+Then('the companion sheet still shows that day\'s time and move count', async function () {
+  assert.equal(await this.page.locator('#duo-daily-tab').getAttribute('aria-selected'), 'true');
   assert.equal(await this.page.locator(`#duo-calendar .cal-day.selected[data-date="${this.solvedDates[0]}"]`).count(), 1);
   const detail = await this.page.locator('#duo-cal-detail').textContent();
   assert.match(detail, /4:05/);
   assert.match(detail, /61 moves/);
+  assert.equal(await this.page.locator('#duo-solved-count').textContent(), '2');
 });
 
 Then('the move history says it begins with the next move', async function () {

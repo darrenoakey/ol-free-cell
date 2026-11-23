@@ -32,10 +32,18 @@ final class DuoWorkspaceUITests: XCTestCase {
     }
 
     @MainActor
-    func testUnfoldedIPhoneDuoShowsCompanionBesideLiveTable() {
+    func testUnfoldedIPhoneDuoOpensCompanionSheetOnDemand() {
         XCUIDevice.shared.orientation = .landscapeLeft
+        // The unfolded Duo is all playfield: the companion only appears on demand.
+        XCTAssertFalse(app.buttons["Move history"].exists)
+        XCTAssertFalse(app.buttons["Daily progress"].exists)
+        let toggle = app.buttons["Show companion"]
+        XCTAssertTrue(waitForExistence(toggle, timeout: 15))
+        XCTAssertTrue(toggle.isHittable)
+        toggle.tap()
+
         let movesTab = app.buttons["Move history"]
-        XCTAssertTrue(waitForExistence(movesTab, timeout: 15))
+        XCTAssertTrue(waitForExistence(movesTab, timeout: 10))
         XCTAssertTrue(movesTab.isHittable)
         XCTAssertTrue(app.buttons["Menu"].exists)
         XCTAssertTrue(app.buttons["Undo"].exists)
@@ -54,6 +62,11 @@ final class DuoWorkspaceUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Next review position"].exists)
         let window = app.windows.element(boundBy: 0).frame
         XCTAssertGreaterThan(window.width, window.height)
+
+        // Dismissing the sheet gives the playfield back.
+        app.buttons["Hide companion"].tap()
+        XCTAssertFalse(waitForExistence(app.buttons["Move history"], timeout: 2))
+        XCTAssertTrue(app.buttons["Show companion"].isHittable)
     }
 
     @MainActor

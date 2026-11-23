@@ -40,6 +40,48 @@
     }))];
   }
 
+  /* ---- companion presentation ----
+     The unfolded Duo gives the whole screen to the playfield, so the companion
+     is an on-demand overlay the player opens and dismisses. Every transition
+     lives in this reducer: the DOM code has one source of truth and unit tests
+     drive it without a browser. */
+  const TABS = ['moves', 'daily'];
+
+  function overlayState(state = {}) {
+    const expanded = !!state.expanded;
+    const open = expanded && !!state.open;
+    return {
+      expanded,
+      open,
+      visible: open,
+      tab: TABS.includes(state.tab) ? state.tab : 'moves',
+      // The sheet floats above the table, so the playfield keeps the full
+      // unfolded width whether the sheet is open or closed.
+      playfieldFullWidth: expanded,
+    };
+  }
+
+  function reduceOverlay(state, action, payload) {
+    const current = overlayState(state);
+    switch (action) {
+      case 'expand':
+        return overlayState({ ...current, expanded: payload === undefined ? true : !!payload });
+      case 'collapse':
+        return overlayState({ ...current, expanded: false });
+      case 'open':
+        return overlayState({ ...current, open: true });
+      case 'close':
+        return overlayState({ ...current, open: false });
+      case 'toggle':
+        return overlayState({ ...current, open: !current.open });
+      case 'select-tab':
+        // Asking for a tab is asking to read the sheet.
+        return overlayState({ ...current, tab: payload, open: true });
+      default:
+        return current;
+    }
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (character) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -54,13 +96,18 @@
       this.reviewIndex = null;
       this.selectedDate = null;
       this.calMonth = null;
+      this.state = overlayState({ expanded: false, open: false, tab: 'moves' });
     }
 
     init() {
       this.element.innerHTML = `
+        <div class="duo-sheet" role="dialog" aria-modal="false" aria-label="FreeCell companion" id="duo-sheet">
         <div class="duo-heading">
           <div><span class="duo-eyebrow">Unfolded workspace</span><h2>FreeCell companion</h2></div>
-          <span class="duo-live-badge">LIVE</span>
+          <div class="duo-heading-actions">
+            <span class="duo-live-badge">LIVE</span>
+            <button id="duo-companion-close" class="duo-small-button duo-close" type="button" aria-label="Hide companion">Done</button>
+          </div>
         </div>
         <div class="duo-tabs" role="tablist" aria-label="Companion views">
           <button id="duo-moves-tab" class="duo-tab" role="tab" aria-selected="true" aria-controls="duo-moves-panel">Move history</button>
@@ -88,10 +135,15 @@
           </div>
           <div id="duo-calendar"></div>
           <button id="duo-play-date" class="ctrl-btn primary hidden" type="button">Play this day</button>
-        </section>`;
+        </section>
+        </div>`;
 
       this.element.querySelector('#duo-moves-tab').addEventListener('click', () => this.selectTab('moves'));
       this.element.querySelector('#duo-daily-tab').addEventListener('click', () => this.selectTab('daily'));
+      this.element.querySelector('#duo-companion-close').addEventListener('click', () => this.close());
+      this.element.addEventListener('click', (event) => {
+        if (event.target === this.element) this.close();
+      });
       this.element.querySelector('#duo-review-live').addEventListener('click', () => this.selectLive());
       this.element.querySelector('#duo-review-prev').addEventListener('click', () => this.shiftReview(-1));
       this.element.querySelector('#duo-review-next').addEventListener('click', () => this.shiftReview(1));
@@ -114,13 +166,50 @@
     }
 
     selectTab(tab) {
-      this.tab = tab;
-      const moves = tab === 'moves';
+      this.applyOverlay(reduceOverlay(this.state, 'select-tab', tab));
+      this.refresh();
+    }
+
+    /** Viewport reports an unfolded or folded Duo. Folding dismisses the sheet. */
+    setExpanded(expanded) {
+      this.applyOverlay(reduceOverlay(this.state, expanded ? 'expand' : 'collapse'));
+    }
+
+    open() {
+      this.dispatch('open');
+    }
+
+    close() {
+      this.dispatch('close');
+    }
+
+    toggle() {
+      this.dispatch('toggle');
+    }
+
+    dispatch(action, payload) {
+      this.applyOverlay(reduceOverlay(this.state, action, payload));
+      this.refresh();
+    }
+
+    /** Mirror the reduced state onto the DOM. Nothing here decides visibility. */
+    applyOverlay(state) {
+      this.state = state;
+      this.tab = state.tab;
+      const moves = state.tab === 'moves';
       this.element.querySelector('#duo-moves-tab').setAttribute('aria-selected', String(moves));
       this.element.querySelector('#duo-daily-tab').setAttribute('aria-selected', String(!moves));
       this.element.querySelector('#duo-moves-panel').classList.toggle('hidden', !moves);
       this.element.querySelector('#duo-daily-panel').classList.toggle('hidden', moves);
-      this.refresh();
+      this.element.classList.toggle('is-open', state.open);
+      this.element.setAttribute('aria-hidden', String(!state.open));
+      this.element.dataset.duoSheet = state.open ? 'open' : 'closed';
+      document.body.classList.toggle('duo-companion-open', state.open);
+      const toggle = document.getElementById('duo-btn');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', String(state.open));
+        toggle.setAttribute('aria-label', state.open ? 'Hide companion' : 'Show companion');
+      }
     }
 
     selectReview(index) {
@@ -246,5 +335,7 @@
     }
   }
 
-  root.FreeCellDuo = { Companion, cardName, describeEntry, reviewFrames };
+  root.FreeCellDuo = {
+    Companion, TABS, cardName, describeEntry, overlayState, reduceOverlay, reviewFrames,
+  };
 })(globalThis);
