@@ -35,7 +35,9 @@ Feature: iPhone Duo FreeCell workspace
     And I open the Duo companion
     Then the Duo companion is visible over the FreeCell table
     And the Move history tab is selected
-    When I drag a playable card to an empty freecell
+    When I dismiss the Duo companion
+    And I drag a playable card to an empty freecell
+    And I open the Duo companion
     Then the move history records the actual card move
     When I select the first move for review
     Then the replay shows the position after move 1
@@ -79,8 +81,10 @@ Feature: iPhone Duo FreeCell workspace
     When I unfold the Duo workspace
     And I open the Duo companion
     Then the move history says it begins with the next move
-    When I drag a playable card to an empty freecell
+    When I dismiss the Duo companion
+    And I drag a playable card to an empty freecell
     Then the live table remains at move 5
+    And I open the Duo companion
     And the move history records the actual card move
     When I reopen OL FreeCell
     Then the live table remains at move 5
