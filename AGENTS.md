@@ -37,5 +37,6 @@ Legacy daily data lives in Capacitor Preferences keys `olfreecell.completed.<dat
 
 ## iPhone Duo
 
+- The unfolded Duo is a single-column, edge-to-edge playfield. The companion (move journal, daily progress) is an on-demand sheet over the table via the `#duo-btn` header toggle, not a second column. `web/js/duo.js` exports `overlayState`/`reduceOverlay`; that reducer is the only place sheet visibility is decided, and `tests/unit/duo-companion.test.mjs` drives it without a browser. Never reintroduce a two-column `--ol-duo-primary`/`--ol-duo-companion` split: it narrows the table and unbalances the card geometry.
 - `DuoWorkspaceUITests.swift` must stay in the AppUITests target in `project.pbxproj`; the ordinary phone gate runs only the `AppUITests` class, while the Duo class needs a separate folded/open Duo simulator qualification through the fleet's native slot.
 - Browser progress fixtures installed with `addInitScript` run again on reload. Seed legacy progress only when its key is absent, or the fixture will overwrite the newer autosave that the reload test is meant to verify.

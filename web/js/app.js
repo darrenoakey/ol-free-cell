@@ -143,9 +143,16 @@ const App = {
       label: 'FreeCell table',
       secondaryLabel: 'FreeCell companion',
     });
+    // The companion is a sheet over the playfield, not a second column, so the
+    // table keeps every point of the unfolded screen.
+    $('duo-btn').addEventListener('click', () => this.duoCompanion.toggle());
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.duoCompanion.state.open) this.duoCompanion.close();
+    });
     this.duoObserver = OL.Duo.observe((state) => {
       document.body.classList.toggle('duo-expanded', state.expanded);
       if (state.expanded) document.body.classList.remove('landscape-left', 'landscape-right');
+      this.duoCompanion.setExpanded(state.expanded);
       if (this.game) {
         requestAnimationFrame(() => UI.render(this.game, this.stats, this.context));
       }
