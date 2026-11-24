@@ -50,6 +50,15 @@ async function waitForPlayable(page) {
   await page.locator('#tableau .card.playable').first().waitFor();
 }
 
+// Duo scenarios assert workspace and companion behavior, never card flight, so
+// they take the real reduced-motion product path: it skips ~2.6s of deal-in
+// per load. The full animation stays covered by the sunlit felt feature.
+Given('I launch OL FreeCell with reduced motion', async function () {
+  await this.page.emulateMedia({ reducedMotion: 'reduce' });
+  await this.page.goto(rootUrl, { waitUntil: 'load' });
+  await waitForPlayable(this.page);
+});
+
 Given('my FreeCell history has two solved days this month', async function () {
   const today = localDateKey();
   const prefix = today.slice(0, 7);
@@ -145,7 +154,8 @@ When('I choose the first solved day in the Duo calendar', async function () {
 });
 
 When('I reopen OL FreeCell', async function () {
-  await this.page.reload({ waitUntil: 'networkidle' });
+  // Reduced-motion emulation set at launch persists across the reload.
+  await this.page.reload({ waitUntil: 'load' });
   await waitForPlayable(this.page);
 });
 

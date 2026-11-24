@@ -5,21 +5,21 @@ Feature: iPhone Duo FreeCell workspace
   same game, card geometry and daily progress.
 
   Scenario: Folded play keeps one full-width table
-    Given I launch OL FreeCell at the root
+    Given I launch OL FreeCell with reduced motion
     Then the daily FreeCell table is visible
     And the Duo companion is hidden
     And the companion button is hidden
     And the FreeCell table uses the folded width
 
   Scenario: Unfolding gives the playfield the whole unfolded screen
-    Given I launch OL FreeCell at the root
+    Given I launch OL FreeCell with reduced motion
     When I unfold the Duo workspace
     Then the FreeCell table fills the unfolded width
     And the Duo companion is hidden
     And the companion button is visible
 
   Scenario: The companion sheet opens over the untouched live table
-    Given I launch OL FreeCell at the root
+    Given I launch OL FreeCell with reduced motion
     When I unfold the Duo workspace
     And I open the Duo companion
     Then the Duo companion is visible over the FreeCell table
@@ -30,7 +30,7 @@ Feature: iPhone Duo FreeCell workspace
     And the FreeCell table still fills the unfolded width
 
   Scenario: Unfolding reveals non-destructive live move replay
-    Given I launch OL FreeCell at the root
+    Given I launch OL FreeCell with reduced motion
     When I unfold the Duo workspace
     And I open the Duo companion
     Then the Duo companion is visible over the FreeCell table
@@ -58,7 +58,7 @@ Feature: iPhone Duo FreeCell workspace
 
   Scenario: Daily progress uses real OL.History records
     Given my FreeCell history has two solved days this month
-    And I launch OL FreeCell at the root
+    And I launch OL FreeCell with reduced motion
     When I unfold the Duo workspace
     And I open the Duo companion
     And I select the Daily progress tab
@@ -76,7 +76,7 @@ Feature: iPhone Duo FreeCell workspace
 
   Scenario: Legacy in-progress deals survive and gain a persistent journal
     Given a legacy FreeCell deal is in progress at move 4
-    And I launch OL FreeCell at the root
+    And I launch OL FreeCell with reduced motion
     Then the live table remains at move 4
     When I unfold the Duo workspace
     And I open the Duo companion
