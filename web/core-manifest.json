@@ -1,6 +1,6 @@
 {
-  "version": "0.3.1",
-  "commit": "9071dfe29b98af84cb3d2c1eea94b04a0fb4aa05",
+  "version": "0.4.0",
+  "commit": "1ac2aacbdd96f8587660c7cb152623900314aae8",
   "apiVersion": 3,
   "files": {
     "core/assets/backs/bust.svg": "41706a71f8cd832441d860a1464686ed044c86b0cb727cdc35c8fac0deea98a5",
@@ -112,7 +112,7 @@
     "core/js/chrome.js": "eec13b8a54330ebfa31609d546cb66e04a96261f632ec301434cebe922b7e7d0",
     "core/js/confetti.js": "984f0df108187bbce2f3bc985b281ae61c0b19205161a5c05a195cf9d569f760",
     "core/js/deal.js": "79243ea617013b5c5c26df3756f5a19aa1c931e667e0493862fb0d60c1a7b12a",
-    "core/js/duo.js": "dadf63355f9f95d594834d83f2d0a252be13932f7d01081f02d9098747845652",
+    "core/js/duo.js": "0d3211d0200f1e0d9a472b828e1c6eb847aab51e8ab1e8fb80ce0b4365468027",
     "core/js/history.js": "eeafc5c3d9ae6cc196318a98ac4a7ab40c20ae6ed12b9d891e580ae47535d61e",
     "core/js/namespace.js": "88c276c769c3002ccf7d118a6c3a6f148b0fcaffc2dff9b2bb2abbec2d629228",
     "core/js/prng.js": "1f43a699df2a621a3892dc5652797833772053a80ab0567a39d198312a1bb2a8",

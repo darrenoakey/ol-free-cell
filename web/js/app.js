@@ -151,7 +151,22 @@ const App = {
     });
     this.duoObserver = OL.Duo.observe((state) => {
       document.body.classList.toggle('duo-expanded', state.expanded);
+      // A Duo screen (folded cover or unfolded) lays its table out with the
+      // shared frame. An ordinary phone keeps its own phone layout.
+      document.body.classList.toggle('duo-framed', !!state.framed);
       if (state.expanded) document.body.classList.remove('landscape-left', 'landscape-right');
+      // Shared card-table geometry owns every frame; CSS reads these only.
+      const frame = OL.Duo.tableFrameFromEnv(window);
+      const workspace = $('duo-workspace');
+      workspace.dataset.orientation = frame.orientation;
+      workspace.style.setProperty('--duo-table-x', `${frame.table.x}px`);
+      workspace.style.setProperty('--duo-table-y', `${frame.table.y}px`);
+      workspace.style.setProperty('--duo-table-w', `${frame.table.width}px`);
+      workspace.style.setProperty('--duo-table-h', `${frame.table.height}px`);
+      if (frame.stats) {
+        workspace.style.setProperty('--duo-stats-x', `${frame.stats.x}px`);
+        workspace.style.setProperty('--duo-stats-w', `${frame.stats.width}px`);
+      }
       this.duoCompanion.setExpanded(state.expanded);
       if (this.game) {
         requestAnimationFrame(() => UI.render(this.game, this.stats, this.context));

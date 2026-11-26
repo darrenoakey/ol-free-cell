@@ -173,22 +173,24 @@ Then('the companion button is visible', async function () {
   assert.equal(await this.page.locator('#duo-btn').getAttribute('aria-expanded'), 'false');
 });
 
-/** The table owns the whole unfolded screen, whether the sheet is open or not. */
+/** The table matches the shared portrait-rectangle frame in both orientations. */
 async function assertUnfoldedPlayfield(page) {
   const dimensions = await page.evaluate(() => {
     const app = document.querySelector('#app').getBoundingClientRect();
     const card = document.querySelector('#tableau .card').getBoundingClientRect();
+    const frame = OL.Duo.tableFrame({ width: innerWidth, height: innerHeight }, { top: 0, right: 0, bottom: 0, left: 0 });
     return {
       appWidth: app.width,
       appLeft: app.left,
-      appRight: app.right,
+      appHeight: app.height,
       viewportWidth: innerWidth,
+      expected: { x: frame.table.x, width: frame.table.width, height: frame.table.height },
       cardRatio: card.width / card.height,
     };
   });
-  assert.ok(Math.abs(dimensions.appWidth - dimensions.viewportWidth) < 1, JSON.stringify(dimensions));
-  assert.ok(dimensions.appLeft < 1, JSON.stringify(dimensions));
-  assert.ok(Math.abs(dimensions.appRight - dimensions.viewportWidth) < 1, JSON.stringify(dimensions));
+  assert.ok(Math.abs(dimensions.appWidth - dimensions.expected.width) < 1, JSON.stringify(dimensions));
+  assert.ok(Math.abs(dimensions.appLeft - dimensions.expected.x) < 1, JSON.stringify(dimensions));
+  assert.ok(Math.abs(dimensions.appHeight - dimensions.expected.height) < 1, JSON.stringify(dimensions));
   assert.ok(Math.abs(dimensions.cardRatio - 512 / 768) < 0.01, JSON.stringify(dimensions));
 }
 
